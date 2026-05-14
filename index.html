@@ -652,7 +652,7 @@ async function loadVentas(){
       const cod=cols[2];
       VENTAS[cod]={Gourmet:parseFloat(cols[5])||0,Cocadas:parseFloat(cols[6])||0,Pomgur:parseFloat(cols[7])||0,Cosmic:parseFloat(cols[8])||0,Yomax:parseFloat(cols[9])||0,Arequipe:parseFloat(cols[10])||0};
     }
-    document.getElementById('ventas-status').textContent='✅ En tiempo real';
+    document.getElementById('ventas-status').textContent='✅ Junio';
     document.getElementById('ventas-status').style.color='#27ae60';
     document.getElementById('last-update').textContent='Actualizado: '+new Date().toLocaleTimeString('es-CO');
     hideLoading();renderCurrentView();renderRankingsIfVisible();

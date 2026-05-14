@@ -974,8 +974,8 @@ function renderClientList(){
       <td>${bdg}</td>
       <td style="font-weight:600">${fmtNum(c.ventaTotal)}</td>
       <td style="color:var(--gris)">${fmtNum(c.metaTotal)}</td>
-      <td class="pct-cell" style="color:${pctColor(c.pct)}">${fmtPct(c.pct)}</td>
-      <td>${progBar(c.pct,8)}</td>
+      <td class="pct-cell" style="color:${semColor(c.pct,c.grupo)}">${fmtPct(c.pct)}</td>
+      <td>${progBar(c.pct,8,c.grupo)}</td>
     </tr>`;
   }).join('');
 }
@@ -996,13 +996,13 @@ function renderClient(){
           <span>Clase: <b>${m.clasificacion==='A+'?'⭐ Copa A+':'Copa A'}</b></span>
         </div>
         <div class="prog-wrap">
-          <div class="prog-lbl"><span>Cumplimiento global</span><span style="color:${pctColor(c.pct)};font-weight:700;font-size:.95rem">${fmtPct(c.pct)}</span></div>
-          ${progBar(c.pct,14)}
+          <div class="prog-lbl"><span>Cumplimiento global</span><span style="color:${semColor(c.pct,m.grupo)};font-weight:700;font-size:.95rem">${fmtPct(c.pct)}</span></div>
+          ${progBar(c.pct,14,m.grupo)}
         </div>
         <div style="font-size:.75rem;color:var(--gris);margin-top:5px">${fmtNum(c.ventaTotal)} unidades vendidas de ${fmtNum(c.metaTotal)} en meta</div>
       </div>
       <div style="text-align:center;background:rgba(0,0,0,.3);border-radius:12px;padding:10px 18px">
-        <div style="font-size:2.2rem;font-weight:900;color:${pctColor(c.pct)}">${fmtPct(c.pct)}</div>
+        <div style="font-size:2.2rem;font-weight:900;color:${semColor(c.pct,m.grupo)}">${fmtPct(c.pct)}</div>
         <div style="font-size:.71rem;color:var(--gris)">Cumplimiento</div>
       </div>
     </div>`;
@@ -1011,11 +1011,11 @@ function renderClient(){
     const meta=m.metas[ma],venta=v[ma]||0,p=(venta/meta)*100;
     return`<div class="marca-card">
       <h4>🏷️ ${ma}</h4>
-      ${progBar(p,10)}
+      ${progBar(p,10,m.grupo)}
       <div class="marca-nums">
         <span>Venta: <b>${fmtNum(venta)}</b></span>
         <span>Meta: <b>${fmtNum(meta)}</b></span>
-        <span style="color:${pctColor(p)};font-weight:700">${fmtPct(p)}</span>
+        <span style="color:${semColor(p,m.grupo)};font-weight:700">${fmtPct(p)}</span>
       </div>
     </div>`;
   }).join('');

@@ -79,6 +79,11 @@ body{background:var(--verde-oscuro);color:var(--blanco);font-family:'Segoe UI',A
 .fill-blue{background:linear-gradient(90deg,#1a6fa0,#2980b9)}
 .fill-green{background:linear-gradient(90deg,#1e8449,#27ae60)}
 .fill-gold{background:linear-gradient(90deg,#c79a00,#FFD700)}
+/* Semaphore fills */
+.fill-sem-red{background:linear-gradient(90deg,#a93226,#e74c3c)}
+.fill-sem-yellow{background:linear-gradient(90deg,#b7770d,#f39c12)}
+.fill-sem-green{background:linear-gradient(90deg,#1a7a3c,#2ecc71)}
+.fill-sem-gold{background:linear-gradient(90deg,#c79a00,#FFD700)}
 
 .section-title{display:flex;align-items:center;gap:10px;margin-bottom:14px}
 .section-title h2{font-size:1.05rem;font-weight:700;color:var(--dorado)}
@@ -147,6 +152,24 @@ body{background:var(--verde-oscuro);color:var(--blanco);font-family:'Segoe UI',A
 .pill-green{{background:rgba(39,174,96,.18);color:#27ae60;border:1px solid rgba(39,174,96,.35)}}
 .pill-gold{{background:rgba(255,215,0,.18);color:#FFD700;border:1px solid rgba(255,215,0,.35)}}
 
+
+/* ===== ALERT BANNER ===== */
+.alert-banner{background:var(--verde-card);border:1px solid rgba(255,215,0,.2);border-radius:var(--radius);padding:14px 16px;margin-bottom:18px}
+.alert-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,.07)}
+.alert-date{font-size:.85rem;font-weight:700;color:var(--dorado);display:flex;align-items:center;gap:6px}
+.alert-expected{display:flex;gap:14px;flex-wrap:wrap;font-size:.76rem;color:var(--gris)}
+.alert-expected span b{color:var(--blanco)}
+.alert-row{font-size:.78rem;padding:6px 10px;border-radius:8px;margin-bottom:4px;display:flex;align-items:flex-start;gap:6px;flex-wrap:wrap}
+.alert-row:last-child{margin-bottom:0}
+.alert-red{background:rgba(231,76,60,.12);color:#ff8a80;border:1px solid rgba(231,76,60,.25)}
+.alert-yellow{background:rgba(243,156,18,.1);color:#f5cba7;border:1px solid rgba(243,156,18,.25)}
+.alert-green{background:rgba(46,204,113,.1);color:#a9dfbf;border:1px solid rgba(46,204,113,.25)}
+.alert-group-alerts{margin-top:10px}
+.sem-pill{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:12px;font-size:.72rem;font-weight:700}
+.sem-pill-red{background:rgba(231,76,60,.15);color:#e74c3c;border:1px solid rgba(231,76,60,.3)}
+.sem-pill-yellow{background:rgba(243,156,18,.15);color:#f39c12;border:1px solid rgba(243,156,18,.3)}
+.sem-pill-green{background:rgba(46,204,113,.15);color:#2ecc71;border:1px solid rgba(46,204,113,.3)}
+.sem-pill-gold{background:rgba(255,215,0,.15);color:#FFD700;border:1px solid rgba(255,215,0,.3)}
 /* ===== RANKING STYLES ===== */
 .empate-note{background:rgba(41,128,185,.15);border:1px solid rgba(41,128,185,.4);border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:.77rem;color:#7ec8e3;display:flex;align-items:flex-start;gap:8px}
 .empate-note .icon{font-size:1.1rem;flex-shrink:0;margin-top:1px}
@@ -277,6 +300,7 @@ body{background:var(--verde-oscuro);color:var(--blanco);font-family:'Segoe UI',A
 
   <div class="view active" id="view-main">
     <div class="container">
+      <div id="main-alerts"></div>
       <div class="stats-row" id="main-stats"></div>
       <div class="section-title"><h2>⚽ Grupos de Venta</h2></div>
       <div class="grupos-grid" id="grupos-grid"></div>
@@ -539,6 +563,15 @@ for(const r of METAS_RAW){
   };
 }
 
+// Promedio U3M = meta / 1.25
+const PROM_U3M = {};
+for(const r of METAS_RAW){
+  PROM_U3M[r[2]] = {
+    Gourmet:r[5]/1.25, Cocadas:r[6]/1.25, Pomgur:r[7]/1.25,
+    Cosmic:r[8]/1.25, Yomax:r[9]/1.25, Arequipe:r[10]/1.25
+  };
+}
+
 let VENTAS = {};
 let state = {view:'main',grupo:null,vendedor:null,filtro:'all',cliente:null};
 let currentTopView = 'dashboard';
@@ -553,6 +586,54 @@ document.getElementById('trophy-btn').addEventListener('click',()=>{
 });
 function activateAdmin(){adminMode=true;document.getElementById('admin-bar').classList.add('visible');document.getElementById('admin-dot').style.display='block';}
 function exitAdmin(){adminMode=false;document.getElementById('admin-bar').classList.remove('visible');document.getElementById('admin-dot').style.display='none';}
+
+// ===== SEMÁFORO DE DÍAS HÁBILES =====
+function getWorkingDayInfo(grupo) {
+  const today = new Date();
+  const year = today.getFullYear(), month = today.getMonth(), todayDate = today.getDate();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const isPrev = grupo === 'P_PER' || grupo === 'P_MZL';
+  let total = 0, elapsed = 0;
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dow = new Date(year, month, d).getDay();
+    const isWork = isPrev ? (dow >= 1 && dow <= 6) : (dow >= 1 && dow <= 5);
+    if (isWork) { total++; if (d <= todayDate) elapsed++; }
+  }
+  return { total, elapsed, pct: total > 0 ? (elapsed / total) * 100 : 0 };
+}
+function semFillClass(pct, grupo) {
+  if (pct >= 100) return 'fill-sem-gold';
+  const exp = getWorkingDayInfo(grupo).pct;
+  if (pct >= exp) return 'fill-sem-green';
+  if (pct >= exp - 5) return 'fill-sem-yellow';
+  return 'fill-sem-red';
+}
+function semColor(pct, grupo) {
+  if (pct >= 100) return '#FFD700';
+  const exp = getWorkingDayInfo(grupo).pct;
+  if (pct >= exp) return '#2ecc71';
+  if (pct >= exp - 5) return '#f39c12';
+  return '#e74c3c';
+}
+function semPillClass(pct, grupo) {
+  if (pct >= 100) return 'sem-pill-gold';
+  const exp = getWorkingDayInfo(grupo).pct;
+  if (pct >= exp) return 'sem-pill-green';
+  if (pct >= exp - 5) return 'sem-pill-yellow';
+  return 'sem-pill-red';
+}
+function semEmoji(pct, grupo) {
+  if (pct >= 100) return '🏆';
+  const exp = getWorkingDayInfo(grupo).pct;
+  if (pct >= exp) return '🟢';
+  if (pct >= exp - 5) return '🟡';
+  return '🔴';
+}
+function progBar(p, h, grupo) {
+  const w = Math.min(p, 150);
+  const cls = grupo ? semFillClass(p, grupo) : fillClass(p);
+  return '<div class="prog-bar" style="height:'+(h||10)+'px"><div class="prog-fill '+cls+'" style="width:'+w+'%"></div></div>';
+}
 
 // ===== FETCH =====
 async function loadVentas(){
@@ -597,31 +678,45 @@ function calcCliente(cod){
   return {metaTotal,ventaTotal,pct,bonusBrands};
 }
 function calcGrupo(grupo){
-  let mt=0,vt=0,cnt=0,cntAp=0,cntA=0,pAp=0,nAp=0,pA=0,nA=0;
+  let mt=0,vt=0,promTotal=0,cnt=0,cntAp=0,cntA=0,pAp=0,nAp=0,pA=0,nA=0,cntEnMeta=0;
+  const vpcts={};
   for(const cod of Object.keys(METAS)){
     const m=METAS[cod];if(m.grupo!==grupo)continue;
     const c=calcCliente(cod);if(!c)continue;
-    mt+=c.metaTotal;vt+=c.ventaTotal;cnt++;
+    let pr=0;for(const ma of MARCAS)pr+=(PROM_U3M[cod]?PROM_U3M[cod][ma]||0:0);
+    mt+=c.metaTotal;vt+=c.ventaTotal;promTotal+=pr;cnt++;
+    if(c.pct>=100)cntEnMeta++;
     if(m.clasificacion==='A+'){cntAp++;pAp+=c.pct;nAp++;}else{cntA++;pA+=c.pct;nA++;}
+    if(!vpcts[m.vendedor])vpcts[m.vendedor]={mt:0,vt:0};
+    vpcts[m.vendedor].mt+=c.metaTotal;vpcts[m.vendedor].vt+=c.ventaTotal;
   }
-  return{metaTotal:mt,ventaTotal:vt,pct:mt>0?(vt/mt)*100:0,count:cnt,countAplus:cntAp,countA:cntA,
-    avgPctAplus:nAp>0?pAp/nAp:0,avgPctA:nA>0?pA/nA:0};
+  let minP=Infinity,rutaBaja='-',rutaBajaPct=0;
+  for(const[v,sv]of Object.entries(vpcts)){
+    const p=sv.mt>0?(sv.vt/sv.mt)*100:0;
+    if(p<minP){minP=p;rutaBaja=v;rutaBajaPct=p;}
+  }
+  return{metaTotal:mt,ventaTotal:vt,promTotal,
+    pct:mt>0?(vt/mt)*100:0,count:cnt,countAplus:cntAp,countA:cntA,
+    avgPctAplus:nAp>0?pAp/nAp:0,avgPctA:nA>0?pA/nA:0,
+    cntEnMeta,rutaBaja,rutaBajaPct:minP===Infinity?0:rutaBajaPct};
 }
 function calcVendedor(vendedor){
-  let mt=0,vt=0,cnt=0,cntAp=0,cntA=0;
+  let mt=0,vt=0,promTotal=0,cnt=0,cntAp=0,cntA=0,cntEnMeta=0;
   for(const cod of Object.keys(METAS)){
     const m=METAS[cod];if(m.vendedor!==vendedor)continue;
     const c=calcCliente(cod);if(!c)continue;
-    mt+=c.metaTotal;vt+=c.ventaTotal;cnt++;
+    let pr=0;for(const ma of MARCAS)pr+=(PROM_U3M[cod]?PROM_U3M[cod][ma]||0:0);
+    mt+=c.metaTotal;vt+=c.ventaTotal;promTotal+=pr;cnt++;
+    if(c.pct>=100)cntEnMeta++;
     if(m.clasificacion==='A+')cntAp++;else cntA++;
   }
-  return{metaTotal:mt,ventaTotal:vt,pct:mt>0?(vt/mt)*100:0,count:cnt,countAplus:cntAp,countA:cntA};
+  return{metaTotal:mt,ventaTotal:vt,promTotal,
+    pct:mt>0?(vt/mt)*100:0,count:cnt,countAplus:cntAp,countA:cntA,cntEnMeta};
 }
 
 // ===== HELPERS =====
 function fillClass(p){return p<50?'fill-red':p<80?'fill-orange':p<100?'fill-blue':p<120?'fill-green':'fill-gold'}
 function pctColor(p){return p<50?'#e74c3c':p<80?'#e67e22':p<100?'#2980b9':p<120?'#27ae60':'#FFD700'}
-function progBar(p,h){const w=Math.min(p,150);return`<div class="prog-bar" style="height:${h||10}px"><div class="prog-fill ${fillClass(p)}" style="width:${w}%"></div></div>`;}
 function fmtPct(p){return p.toFixed(1)+'%'}
 function fmtNum(n){return(n||0).toLocaleString('es-CO')}
 
@@ -668,31 +763,85 @@ function renderBreadcrumb(){
 
 // ===== RENDER MAIN =====
 function renderMain(){
-  const grupos=['A_TAT','P_PER','P_MZL'];
-  let tm=0,tv=0,tc=0;
-  for(const g of grupos){const s=calcGrupo(g);tm+=s.metaTotal;tv+=s.ventaTotal;tc+=s.count;}
-  const pg=tm>0?(tv/tm)*100:0;
-  document.getElementById('main-stats').innerHTML=`
-    <div class="stat-card"><div class="val">${tc.toLocaleString()}</div><div class="lbl">Clientes participantes</div></div>
-    <div class="stat-card"><div class="val" style="color:${pctColor(pg)}">${fmtPct(pg)}</div><div class="lbl">Cumplimiento global</div></div>
-    <div class="stat-card"><div class="val">${fmtNum(tv)}</div><div class="lbl">Unidades vendidas</div></div>
-    <div class="stat-card"><div class="val">${fmtNum(tm)}</div><div class="lbl">Meta total</div></div>`;
-  const gnms={A_TAT:'Zona TAT / Autoservicios',P_PER:'Pereira / Periférico',P_MZL:'Manizales / MZL'};
-  document.getElementById('grupos-grid').innerHTML=grupos.map(g=>{
-    const s=calcGrupo(g);
-    return`<div class="grupo-card" onclick="goTo('group',{grupo:'${g}'})">
-      <h2>⚽ ${g}</h2>
-      <div class="sub">${gnms[g]} · ${s.count} clientes</div>
-      <div class="clase-row">
-        <div class="clase-pill"><div class="cpct pct-aplus">${fmtPct(s.avgPctAplus)}</div><div class="clbl">⭐ Prom. A+</div></div>
-        <div class="clase-pill"><div class="cpct pct-a">${fmtPct(s.avgPctA)}</div><div class="clbl">Prom. A</div></div>
-      </div>
-      <div class="prog-wrap">
-        <div class="prog-lbl"><span>Cumplimiento total</span><span style="color:${pctColor(s.pct)};font-weight:700">${fmtPct(s.pct)}</span></div>
-        ${progBar(s.pct,12)}
-      </div>
-    </div>`;
-  }).join('');
+  try {
+    const grupos=['A_TAT','P_PER','P_MZL'];
+    let tm=0,tv=0,tc=0;
+    for(let i=0;i<grupos.length;i++){
+      const s=calcGrupo(grupos[i]);
+      tm+=s.metaTotal; tv+=s.ventaTotal; tc+=s.count;
+    }
+    const pg=tm>0?(tv/tm)*100:0;
+    const infoTAT=getWorkingDayInfo('A_TAT');
+    const infoPRE=getWorkingDayInfo('P_PER');
+    const today=new Date();
+    const mName=today.toLocaleDateString('es-CO',{month:'long',year:'numeric'});
+    const capMonth=mName.charAt(0).toUpperCase()+mName.slice(1);
+
+    // Alert banner
+    let alertHtml='<div class="alert-banner"><div class="alert-header">';
+    alertHtml+='<span class="alert-date">📅 '+capMonth+'</span>';
+    alertHtml+='<div class="alert-expected"><span>⏱️ A_TAT (L-V): día <b>'+infoTAT.elapsed+'/'+infoTAT.total+'</b> → <b>'+fmtPct(infoTAT.pct)+'</b> esp.</span>';
+    alertHtml+='<span>⏱️ Preventas (L-S): día <b>'+infoPRE.elapsed+'/'+infoPRE.total+'</b> → <b>'+fmtPct(infoPRE.pct)+'</b> esp.</span></div></div>';
+    const gs=grupos.map(function(g){const s=calcGrupo(g);const info=getWorkingDayInfo(g);return{g:g,pct:s.pct,exp:info.pct};});
+    const enRojo=gs.filter(function(x){return x.pct<x.exp-5;});
+    const enAm=gs.filter(function(x){return x.pct>=x.exp-5&&x.pct<x.exp;});
+    const enV=gs.filter(function(x){return x.pct>=x.exp&&x.pct<100;});
+    if(enRojo.length) alertHtml+='<div class="alert-row alert-red">🔴 <b>Por debajo:</b> '+enRojo.map(function(x){return x.g+' ('+fmtPct(x.pct)+' vs '+fmtPct(x.exp)+' esp.)';}).join(' · ')+'</div>';
+    if(enAm.length) alertHtml+='<div class="alert-row alert-yellow">🟡 <b>En alerta:</b> '+enAm.map(function(x){return x.g+' ('+fmtPct(x.pct)+')';}).join(' · ')+'</div>';
+    if(enV.length) alertHtml+='<div class="alert-row alert-green">🟢 <b>Al día:</b> '+enV.map(function(x){return x.g+' ('+fmtPct(x.pct)+')';}).join(' · ')+'</div>';
+    alertHtml+='</div>';
+    document.getElementById('main-alerts').innerHTML=alertHtml;
+
+    // Stats
+    const infoMix=(infoTAT.pct+infoPRE.pct)/2;
+    let sh='';
+    sh+='<div class="stat-card"><div class="val">'+tc.toLocaleString()+'</div><div class="lbl">Clientes participantes</div></div>';
+    sh+='<div class="stat-card"><div class="val" style="color:'+semColor(pg,'A_TAT')+'">'+fmtPct(pg)+'</div><div class="lbl">Cumplimiento global</div><div style="font-size:.68rem;color:var(--gris);margin-top:3px">'+fmtNum(tv)+' de '+fmtNum(tm)+' unidades</div></div>';
+    sh+='<div class="stat-card"><div class="val" style="color:var(--dorado2)">'+fmtPct(infoMix)+'</div><div class="lbl">Avance esperado hoy</div><div style="font-size:.68rem;color:var(--gris);margin-top:3px">TAT '+fmtPct(infoTAT.pct)+' · Prev. '+fmtPct(infoPRE.pct)+'</div></div>';
+    sh+='<div class="stat-card"><div class="val">'+fmtNum(tv)+'</div><div class="lbl">Unidades vendidas</div></div>';
+    document.getElementById('main-stats').innerHTML=sh;
+
+    // Grupo cards — use data-grupo to avoid quote nesting
+    const gnms={A_TAT:'Zona TAT',P_PER:'Pereira',P_MZL:'Manizales'};
+    let ch='';
+    for(let gi=0;gi<grupos.length;gi++){
+      const g=grupos[gi];
+      const s=calcGrupo(g);
+      const info=getWorkingDayInfo(g);
+      const numV=[...new Set(Object.values(METAS).filter(function(m){return m.grupo===g;}).map(function(m){return m.vendedor;}))].length;
+      const falt=Math.max(0,s.metaTotal-s.ventaTotal);
+      const sc=semColor(s.pct,g);
+      const spc=semPillClass(s.pct,g);
+      ch+='<div class="grupo-card" data-grupo="'+g+'">';
+      ch+='<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">';
+      ch+='<div><h2 style="margin-bottom:2px">⚽ '+g+'</h2><div class="sub">'+gnms[g]+' · '+numV+' rutas · '+s.count+' clientes</div></div>';
+      ch+='<span class="sem-pill '+spc+'" style="font-size:.78rem;padding:5px 12px">'+fmtPct(s.pct)+'</span></div>';
+      ch+='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px">';
+      ch+='<div style="background:rgba(0,0,0,.2);border-radius:8px;padding:8px"><div style="font-size:.82rem;font-weight:700;color:var(--blanco)">'+fmtNum(Math.round(s.promTotal))+'</div><div style="font-size:.6rem;color:var(--gris);margin-top:2px">PROM. 3M</div></div>';
+      ch+='<div style="background:rgba(0,0,0,.2);border-radius:8px;padding:8px"><div style="font-size:.82rem;font-weight:700;color:var(--blanco)">'+fmtNum(s.metaTotal)+'</div><div style="font-size:.6rem;color:var(--gris);margin-top:2px">META</div></div>';
+      ch+='<div style="background:rgba(0,0,0,.2);border-radius:8px;padding:8px"><div style="font-size:.82rem;font-weight:700;color:var(--blanco)">'+fmtNum(s.ventaTotal)+'</div><div style="font-size:.6rem;color:var(--gris);margin-top:2px">VENTA ACUM.</div></div>';
+      ch+='</div>';
+      ch+='<div style="background:rgba(0,0,0,.2);border-radius:8px;padding:8px;margin-bottom:8px;display:inline-block">';
+      ch+='<div style="font-size:.92rem;font-weight:800;color:'+sc+'">'+s.cntEnMeta+'/'+s.count+'</div><div style="font-size:.6rem;color:var(--gris)">EN META</div></div>';
+      ch+='<div class="prog-wrap"><div class="prog-lbl">';
+      ch+='<span style="font-size:.7rem">Avance del mes: <b style="color:var(--dorado2)">'+fmtPct(info.pct)+'</b> ('+info.elapsed+'/'+info.total+' días)</span>';
+      ch+='<span style="color:'+sc+';font-weight:700">'+fmtPct(s.pct)+'</span></div>';
+      ch+=progBar(s.pct,11,g);
+      ch+='<div style="display:flex;justify-content:space-between;margin-top:5px;font-size:.7rem">';
+      ch+='<span style="color:var(--gris)">'+fmtNum(falt)+' unid. faltantes</span>';
+      ch+='<span style="color:var(--gris)">Ruta baja: <b style="color:'+semColor(s.rutaBajaPct,g)+'">'+s.rutaBaja+' ('+fmtPct(s.rutaBajaPct)+')</b></span>';
+      ch+='</div></div></div>';
+    }
+    document.getElementById('grupos-grid').innerHTML=ch;
+    // Attach click handlers via data-grupo
+    document.querySelectorAll('#grupos-grid .grupo-card').forEach(function(el){
+      el.addEventListener('click',function(){goTo('group',{grupo:el.getAttribute('data-grupo')});});
+    });
+
+  } catch(err) {
+    console.error('renderMain error:', err);
+    document.getElementById('grupos-grid').innerHTML='<div style="color:#e74c3c;background:rgba(231,76,60,.1);border-radius:8px;padding:16px;grid-column:1/-1">⚠️ Error: '+err.message+'</div>';
+  }
 }
 
 // ===== RENDER GROUP =====
@@ -700,42 +849,110 @@ function renderGroup(){
   const g=state.grupo;
   document.getElementById('group-title').textContent='⚽ '+g;
   const s=calcGrupo(g);
+  const info=getWorkingDayInfo(g);
   document.getElementById('group-count').textContent=s.count+' clientes';
-  document.getElementById('group-stats').innerHTML=`
-    <div class="stat-card"><div class="val" style="color:${pctColor(s.pct)}">${fmtPct(s.pct)}</div><div class="lbl">Cumplimiento total</div></div>
-    <div class="stat-card"><div class="val pct-aplus">${fmtPct(s.avgPctAplus)}</div><div class="lbl">⭐ Prom. A+</div></div>
-    <div class="stat-card"><div class="val pct-a">${fmtPct(s.avgPctA)}</div><div class="lbl">Prom. A</div></div>
-    <div class="stat-card"><div class="val">${s.countAplus}</div><div class="lbl">Copa A+</div></div>
-    <div class="stat-card"><div class="val">${s.countA}</div><div class="lbl">Copa A</div></div>`;
-  const vends=[...new Set(Object.values(METAS).filter(m=>m.grupo===g).map(m=>m.vendedor))].sort();
-  document.getElementById('vendedores-grid').innerHTML=vends.map(v=>{
+
+  const vends=[...new Set(Object.values(METAS).filter(function(m){return m.grupo===g;}).map(function(m){return m.vendedor;}))].sort();
+  const vendStats=vends.map(function(v){const sv=calcVendedor(v);return{v:v,pct:sv.pct};});
+  const rRojo=vendStats.filter(function(x){return x.pct<info.pct-5;});
+  const rAm=vendStats.filter(function(x){return x.pct>=info.pct-5&&x.pct<info.pct;});
+  const rV=vendStats.filter(function(x){return x.pct>=info.pct&&x.pct<100;});
+  const sortedVP=[...vendStats].sort(function(a,b){return a.pct-b.pct;});
+  const critical=sortedVP[0];
+
+  let alertHtml='';
+  if(critical&&critical.pct<info.pct-5){
+    alertHtml+='<div style="border-left:4px solid #e74c3c;background:rgba(231,76,60,.08);border-radius:0 10px 10px 0;padding:12px 16px;margin-bottom:12px">';
+    alertHtml+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span>⚠️</span><span style="font-weight:700;color:#e74c3c;font-size:.85rem">Ruta crítica: '+critical.v+'</span></div>';
+    alertHtml+='<div style="font-size:.78rem;color:#ff8a80">Al '+fmtPct(critical.pct)+' — atención urgente. Esperado: '+fmtPct(info.pct)+'</div></div>';
+  } else if(critical&&critical.pct<info.pct){
+    alertHtml+='<div style="border-left:4px solid #f39c12;background:rgba(243,156,18,.08);border-radius:0 10px 10px 0;padding:12px 16px;margin-bottom:12px">';
+    alertHtml+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span>⚠️</span><span style="font-weight:700;color:#f39c12;font-size:.85rem">Ruta en alerta: '+critical.v+'</span></div>';
+    alertHtml+='<div style="font-size:.78rem;color:#f5cba7">Al '+fmtPct(critical.pct)+' — revisar seguimiento. Esperado: '+fmtPct(info.pct)+'</div></div>';
+  }
+
+  alertHtml+='<div class="alert-banner" style="margin-bottom:14px"><div class="alert-header" style="margin-bottom:'+(rRojo.length||rAm.length||rV.length?'10px':'0')+'">';
+  alertHtml+='<span class="alert-date">⏱️ Avance esperado hoy</span>';
+  alertHtml+='<div class="alert-expected"><span>Día <b>'+info.elapsed+'/'+info.total+'</b> → <b>'+fmtPct(info.pct)+'</b> esperado</span></div></div>';
+  if(rRojo.length) alertHtml+='<div class="alert-row alert-red">🔴 <b>Por debajo:</b> '+rRojo.map(function(x){return x.v+' ('+fmtPct(x.pct)+')';}).join(' · ')+'</div>';
+  if(rAm.length) alertHtml+='<div class="alert-row alert-yellow">🟡 <b>En alerta:</b> '+rAm.map(function(x){return x.v+' ('+fmtPct(x.pct)+')';}).join(' · ')+'</div>';
+  if(rV.length) alertHtml+='<div class="alert-row alert-green">🟢 <b>Al día:</b> '+rV.map(function(x){return x.v+' ('+fmtPct(x.pct)+')';}).join(' · ')+'</div>';
+  alertHtml+='</div>';
+
+  document.getElementById('group-stats').innerHTML=
+    '<div class="stat-card"><div class="val" style="color:'+semColor(s.pct,g)+'">'+fmtPct(s.pct)+'</div><div class="lbl">Cumplimiento total</div></div>'+
+    '<div class="stat-card"><div class="val pct-aplus">'+fmtPct(s.avgPctAplus)+'</div><div class="lbl">⭐ Copa A+</div></div>'+
+    '<div class="stat-card"><div class="val pct-a">'+fmtPct(s.avgPctA)+'</div><div class="lbl">Copa A</div></div>'+
+    '<div class="stat-card"><div class="val">'+s.countAplus+'</div><div class="lbl">Copa A+</div></div>'+
+    '<div class="stat-card"><div class="val">'+s.countA+'</div><div class="lbl">Copa A</div></div>';
+
+  // Vendor cards - new design matching reference
+  let cardsHtml='';
+  for(let i=0;i<vends.length;i++){
+    const v=vends[i];
     const sv=calcVendedor(v);
-    return`<div class="vend-card" onclick="goTo('vendor',{grupo:'${g}',vendedor:'${v}'})">
-      <h3>📋 ${v}</h3>
-      <div class="vcl">${sv.count} clientes · ${sv.countAplus} A+ · ${sv.countA} A</div>
-      <div class="mini-stats">
-        <div class="mini-stat">Venta: <b>${fmtNum(sv.ventaTotal)}</b></div>
-        <div class="mini-stat">Meta: <b>${fmtNum(sv.metaTotal)}</b></div>
-      </div>
-      <div class="prog-wrap">
-        <div class="prog-lbl"><span>Cumplimiento</span><span style="color:${pctColor(sv.pct)};font-weight:700">${fmtPct(sv.pct)}</span></div>
-        ${progBar(sv.pct,10)}
-      </div>
-    </div>`;
-  }).join('');
+    const sc=semColor(sv.pct,g);
+    cardsHtml+='<div class="vend-card" data-vendedor="'+v+'">';
+    // Header
+    cardsHtml+='<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:2px">';
+    cardsHtml+='<h3 style="font-size:.95rem;font-weight:700;color:var(--blanco)">'+v+'</h3>';
+    cardsHtml+='<span class="sem-pill '+semPillClass(sv.pct,g)+'" style="font-size:.68rem;padding:2px 8px">'+semEmoji(sv.pct,g)+'</span></div>';
+    cardsHtml+='<div style="font-size:.72rem;color:var(--gris);margin-bottom:8px">'+sv.count+' clientes · '+sv.cntEnMeta+' en meta</div>';
+    // Progress bar with avance del mes label
+    cardsHtml+='<div style="font-size:.7rem;color:var(--gris);margin-bottom:4px">Avance del mes: <b style="color:var(--dorado2)">'+fmtPct(info.pct)+'</b></div>';
+    cardsHtml+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">';
+    cardsHtml+=progBar(sv.pct,8,g);
+    cardsHtml+='<span style="font-size:.88rem;font-weight:800;color:'+sc+';white-space:nowrap">'+fmtPct(sv.pct)+'</span></div>';
+    // Stats
+    cardsHtml+='<div style="font-size:.73rem;color:var(--gris)">Meta: <b style="color:var(--blanco)">'+fmtNum(sv.metaTotal)+'</b></div>';
+    cardsHtml+='<div style="font-size:.73rem;color:var(--gris)">Venta: <b style="color:var(--blanco)">'+fmtNum(sv.ventaTotal)+'</b></div>';
+    cardsHtml+='<div style="font-size:.73rem;color:var(--gris)">Prom. 3m: <b style="color:var(--blanco)">'+fmtNum(Math.round(sv.promTotal))+'</b></div>';
+    cardsHtml+='</div>';
+  }
+  document.getElementById('vendedores-grid').innerHTML=cardsHtml;
+  document.querySelectorAll('#vendedores-grid .vend-card').forEach(function(el){
+    el.addEventListener('click',function(){goTo('vendor',{grupo:g,vendedor:el.getAttribute('data-vendedor')});});
+  });
 }
 
 // ===== RENDER VENDOR =====
 function renderVendor(){
   const v=state.vendedor;
+  const gv=state.grupo;
   document.getElementById('vendor-title').textContent='📋 '+v;
   const sv=calcVendedor(v);
+  const infoV=getWorkingDayInfo(gv);
+  const sc=semColor(sv.pct,gv);
+  const spc=semPillClass(sv.pct,gv);
+  const faltante=Math.max(0,sv.metaTotal-sv.ventaTotal);
   document.getElementById('vendor-stats').innerHTML=`
-    <div class="stat-card"><div class="val" style="color:${pctColor(sv.pct)}">${fmtPct(sv.pct)}</div><div class="lbl">Cumplimiento</div></div>
-    <div class="stat-card"><div class="val">${fmtNum(sv.ventaTotal)}</div><div class="lbl">Unidades vendidas</div></div>
-    <div class="stat-card"><div class="val">${fmtNum(sv.metaTotal)}</div><div class="lbl">Meta total</div></div>
-    <div class="stat-card"><div class="val">${sv.countAplus}</div><div class="lbl">⭐ Copa A+</div></div>
-    <div class="stat-card"><div class="val">${sv.countA}</div><div class="lbl">Copa A</div></div>`;
+    <div style="background:var(--verde-card);border:1px solid rgba(255,215,0,.15);border-radius:var(--radius);padding:16px;margin-bottom:6px;grid-column:1/-1">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+        <div>
+          <div style="font-size:.72rem;color:var(--gris)">${gv} · ${sv.count} clientes · ${sv.cntEnMeta} en meta</div>
+          <div style="font-size:.72rem;color:var(--gris);margin-top:2px">⭐ Copa A+: <b style="color:var(--blanco)">${sv.countAplus}</b> &nbsp;·&nbsp; 🏅 Copa A: <b style="color:var(--blanco)">${sv.countA}</b></div>
+        </div>
+        <span class="sem-pill ${spc}" style="font-size:.8rem;padding:5px 14px">${semEmoji(sv.pct,gv)} ${fmtPct(sv.pct)} avance</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px">
+        <div style="background:rgba(0,0,0,.2);border-radius:8px;padding:10px">
+          <div style="font-size:.95rem;font-weight:700;color:var(--blanco)">${fmtNum(sv.metaTotal)}</div>
+          <div style="font-size:.63rem;color:var(--gris);margin-top:2px">META MENSUAL</div>
+        </div>
+        <div style="background:rgba(0,0,0,.2);border-radius:8px;padding:10px">
+          <div style="font-size:.95rem;font-weight:700;color:var(--blanco)">${fmtNum(sv.ventaTotal)}</div>
+          <div style="font-size:.63rem;color:var(--gris);margin-top:2px">VENTA ACUM.</div>
+        </div>
+        <div style="background:rgba(0,0,0,.2);border-radius:8px;padding:10px">
+          <div style="font-size:.95rem;font-weight:700;color:${sc}">${fmtPct(sv.pct)}</div>
+          <div style="font-size:.63rem;color:var(--gris);margin-top:2px">CUMPLIMIENTO</div>
+        </div>
+      </div>
+      <div style="background:rgba(0,0,0,.15);border-radius:8px;padding:10px">
+        <div style="font-size:.7rem;color:var(--gris);margin-bottom:5px">Avance del mes: <b style="color:var(--dorado2)">${fmtPct(infoV.pct)}</b> (día ${infoV.elapsed}/${infoV.total}) · Faltante: <b style="color:var(--blanco)">${fmtNum(faltante)} unidades</b></div>
+        ${progBar(sv.pct,10,gv)}
+      </div>
+    </div>`;
   renderClientList();
 }
 function renderClientList(){

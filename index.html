@@ -310,6 +310,7 @@ body{background:var(--verde-oscuro);color:var(--blanco);font-family:'Segoe UI',A
   <div class="view" id="view-group">
     <div class="container">
       <button class="back-btn" onclick="goTo('main')">← Grupos</button>
+      <div id="group-alerts"></div>
       <div class="section-title"><h2 id="group-title">Grupo</h2><div class="count" id="group-count"></div></div>
       <div class="stats-row" id="group-stats"></div>
       <div class="section-title"><h2>📋 Vendedores / Rutas</h2></div>
@@ -870,14 +871,7 @@ function renderGroup(){
     alertHtml+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span>⚠️</span><span style="font-weight:700;color:#f39c12;font-size:.85rem">Ruta en alerta: '+critical.v+'</span></div>';
     alertHtml+='<div style="font-size:.78rem;color:#f5cba7">Al '+fmtPct(critical.pct)+' — revisar seguimiento. Esperado: '+fmtPct(info.pct)+'</div></div>';
   }
-
-  alertHtml+='<div class="alert-banner" style="margin-bottom:14px"><div class="alert-header" style="margin-bottom:'+(rRojo.length||rAm.length||rV.length?'10px':'0')+'">';
-  alertHtml+='<span class="alert-date">⏱️ Avance esperado hoy</span>';
-  alertHtml+='<div class="alert-expected"><span>Día <b>'+info.elapsed+'/'+info.total+'</b> → <b>'+fmtPct(info.pct)+'</b> esperado</span></div></div>';
-  if(rRojo.length) alertHtml+='<div class="alert-row alert-red">🔴 <b>Por debajo:</b> '+rRojo.map(function(x){return x.v+' ('+fmtPct(x.pct)+')';}).join(' · ')+'</div>';
-  if(rAm.length) alertHtml+='<div class="alert-row alert-yellow">🟡 <b>En alerta:</b> '+rAm.map(function(x){return x.v+' ('+fmtPct(x.pct)+')';}).join(' · ')+'</div>';
-  if(rV.length) alertHtml+='<div class="alert-row alert-green">🟢 <b>Al día:</b> '+rV.map(function(x){return x.v+' ('+fmtPct(x.pct)+')';}).join(' · ')+'</div>';
-  alertHtml+='</div>';
+  document.getElementById('group-alerts').innerHTML=alertHtml;
 
   document.getElementById('group-stats').innerHTML=
     '<div class="stat-card"><div class="val" style="color:'+semColor(s.pct,g)+'">'+fmtPct(s.pct)+'</div><div class="lbl">Cumplimiento total</div></div>'+

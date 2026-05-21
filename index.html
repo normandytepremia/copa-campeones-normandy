@@ -284,7 +284,7 @@ table.rtbl{width:100%;border-collapse:collapse;font-size:.86rem}
     <div class="content" id="mv"><div class="loading"><div class="spin"></div><br>Cargando datos...</div></div>
   </div>
   <div id="trank" class="hidden"><div class="content">
-    <div style="margin-bottom:11px"><div style="font-family:'Bebas Neue',sans-serif;font-size:1.85rem;color:var(--blue);letter-spacing:2px">🏆 Ranking Vendedores</div><div style="color:var(--dim);font-size:.85rem;margin-top:3px">Para ganar el TV TCL 55": todas las marcas ≥ 100% + mayor % crecimiento vs Prom U3M · 1 premio por grupo</div></div>
+    <div style="margin-bottom:11px"><div style="font-family:'Bebas Neue',sans-serif;font-size:1.85rem;color:var(--blue);letter-spacing:2px">🏆 Ranking Vendedores</div><div style="color:var(--dim);font-size:.85rem;margin-top:3px">Para ganar el TV TCL 55": todas las marcas ≥ 100% + mayor % crecimiento vs Prom U3M · 1 premio por grupo</div><div id="rank-sems-info" style="font-size:.8rem;color:var(--blue);margin-top:5px;font-weight:600"></div></div>
     <div id="rkc"><div class="loading"><div class="spin"></div><br>Calculando...</div></div>
   </div></div>
   <div id="tcp" class="hidden"><div class="content">
@@ -338,6 +338,9 @@ function cc(p){return p>=100?(p>100?'over':'green'):p>=80?'yellow':'red';}
 function ccS(p){return p>=100?'green':p>=80?'yellow':'red';} // saturated (no over)
 function emo(l){return l==='green'?'🟢':l==='yellow'?'🟡':'🔴';}
 function fn(n){return Number(Math.round(n)).toLocaleString('es-CO');}
+// Count semanas that have actual sales data (dynamic campaign progress)
+function semsN(){if(!loaded)return 1;const n=SEMS.filter(s=>ventas[s]&&Object.keys(ventas[s]).length>0).length;return n||1;}
+function semsLabel(){const n=semsN();return n<4?`Acum. (${n}/4 sem)`:'Meta Mensual';}
 function cv(c){return c==='green'?'var(--green)':c==='yellow'?'var(--yellow)':c==='over'?'var(--purple)':'var(--red)';}
 
 // ── DATA ──
@@ -372,7 +375,7 @@ function setConn(ok,msg=''){const el=document.getElementById('hconn');if(ok){el.
 function cliCampaign(cod){
   const m=metas[String(cod)];if(!m)return null;
   let gM=0,gV=0;
-  BR.forEach(b=>{gM+=(m['meta_'+b]||0)*4;});
+  BR.forEach(b=>{gM+=(m['meta_'+b]||0)*semsN();});
   const vt=cVT(cod);BR.forEach(b=>{gV+=vt['venta_'+b]||0;});
   const cumpl=gM>0?Math.round(gV/gM*100):(gV>0?100:0);
   return{gM,gV,cumpl};
@@ -388,7 +391,7 @@ function cliPeriod(cod,sk){
   
   if(sk==='Total'){
     BR.forEach((b,i)=>{
-      const meta=(m['meta_'+b]||0)*4;const vta=getVta(b);
+      const meta=(m['meta_'+b]||0)*semsN();const vta=getVta(b);
       if(meta>0){const pct=Math.round(vta/meta*100);regular.push({b,label:BL[i],ico:BICO[i],meta,vta,pct});gM+=meta;gV+=vta;}
       else if(vta>0){bonus.push({b,label:BL[i],ico:BICO[i],vta});}
     });
@@ -411,7 +414,7 @@ function cliPeriod(cod,sk){
 function brandsMx(clients){
   return BR.map((b,i)=>{
     let bM=0,bV=0;
-    clients.forEach(c=>{bM+=(metas[String(c.cod)]?.['meta_'+b]||0)*4;const vt=cVT(c.cod);bV+=vt['venta_'+b]||0;});
+    clients.forEach(c=>{bM+=(metas[String(c.cod)]?.['meta_'+b]||0)*semsN();const vt=cVT(c.cod);bV+=vt['venta_'+b]||0;});
     const pct=bM>0?Math.round(bV/bM*100):(bV>0?9999:0);
     return{b,label:BL[i],ico:BICO[i],bM,bV,pct};
   }).filter(x=>x.bM>0||x.bV>0);
@@ -421,7 +424,7 @@ function vendMx(vend){
   const cls=Object.values(metas).filter(m=>m.vendedor===vend);if(!cls.length)return null;
   const grupo=cls[0].grupo;const ip=grupo.startsWith('P_');
   const bm={},bv={};let pt=0;BR.forEach(b=>{bm[b]=0;bv[b]=0;});
-  cls.forEach(c=>{BR.forEach(b=>{bm[b]+=(c['meta_'+b]||0)*4;pt+=(c['prom_'+b]||0);});const vt=cVT(c.cod);BR.forEach(b=>{bv[b]+=vt['venta_'+b]||0;});});
+  cls.forEach(c=>{BR.forEach(b=>{bm[b]+=(c['meta_'+b]||0)*semsN();pt+=(c['prom_'+b]||0);});const vt=cVT(c.cod);BR.forEach(b=>{bv[b]+=vt['venta_'+b]||0;});});
   const bd={};let mt=0,vt=0;BR.forEach(b=>{const pct=bm[b]>0?Math.round(bv[b]/bm[b]*100):null;bd[b]={meta:bm[b],vta:bv[b],pct};mt+=bm[b];vt+=bv[b];});
   const cumpl=mt>0?Math.round(vt/mt*100):100;const crec=pt>0?Math.round((vt/pt-1)*100):0;
   const allMet=BR.every(b=>bm[b]===0||(bd[b].pct!==null&&bd[b].pct>=100));
@@ -431,7 +434,7 @@ function vendMx(vend){
 function grpMx(grupo,clients){
   const ip=grupo.startsWith('P_');let prom=0,gM=0,gV=0,gE=0;
   clients.forEach(c=>{
-    BR.forEach(b=>{prom+=(c['prom_'+b]||0);gM+=(c['meta_'+b]||0)*4;});
+    BR.forEach(b=>{prom+=(c['prom_'+b]||0);gM+=(c['meta_'+b]||0)*semsN();});
     const vt=cVT(c.cod);let cV2=0;BR.forEach(b=>{const v=vt['venta_'+b]||0;gV+=v;cV2+=v;});
     const cM=BR.reduce((s,b)=>s+(c['meta_'+b]||0)*4,0);
     if(cM>0&&Math.round(cV2/cM*100)>=100)gE++;
@@ -491,7 +494,7 @@ function renderHome(el){
   if(rol==='Coordinador')grupos=[scope];
   const allC=Object.values(metas).filter(m=>grupos.includes(m.grupo));
   let gM=0,gV=0,gP=0,gE=0;
-  allC.forEach(c=>{BR.forEach(b=>{gP+=(c['prom_'+b]||0);gM+=(c['meta_'+b]||0)*4;});const vt=cVT(c.cod);let cv2=0;BR.forEach(b=>{const v=vt['venta_'+b]||0;gV+=v;cv2+=v;});const cm=BR.reduce((s,b)=>s+(c['meta_'+b]||0)*4,0);if(cm>0&&Math.round(cv2/cm*100)>=100)gE++;});
+  allC.forEach(c=>{BR.forEach(b=>{gP+=(c['prom_'+b]||0);gM+=(c['meta_'+b]||0)*4;});const vt=cVT(c.cod);let cv2=0;BR.forEach(b=>{const v=vt['venta_'+b]||0;gV+=v;cv2+=v;});const cm=BR.reduce((s,b)=>s+(c['meta_'+b]||0)*semsN(),0);if(cm>0&&Math.round(cv2/cm*100)>=100)gE++;});
   const gCumpl=gM>0?Math.round(gV/gM*100):0;const gcl=ccS(gCumpl);
   const avA=monthAvp(false);const avP=monthAvp(true);
   // Alerts
@@ -518,7 +521,7 @@ function renderGcard(g,clients){
   const gi=GI[g]||{name:g,tag:'?'};const{prom,gM,gV,gE,cumpl,avp,avEl,avTot,falt,ip}=grpMx(g,clients);
   const cl=ccS(cumpl);const vds=[...new Set(clients.map(c=>c.vendedor))].sort();
   let wv=null,wvP=999;vds.forEach(v=>{const vm=vendMx(v);if(vm&&vm.cumpl<wvP){wvP=vm.cumpl;wv=v;}});
-  const metaLbl='Meta Mensual';
+  const metaLbl=semsLabel();
   return`<div class="gcard" onclick="navGroup('${g}')">
     <div class="gcard-top"><div><div class="gcard-name">🌐 ${g}<span class="gtag">${gi.tag}</span></div><div class="gcard-sub">${gi.name} · ${vds.length} rutas · ${clients.length} clientes</div></div><span class="gpct ${cl}">${cumpl}%</span></div>
     <div class="gstats3"><div class="gs"><div class="gsv b">${fn(prom)}</div><div class="gsl">Prom. 3M</div></div><div class="gs"><div class="gsv">${fn(gM)}</div><div class="gsl">${metaLbl}</div></div><div class="gs"><div class="gsv">${fn(gV)}</div><div class="gsl">Venta Acum.</div></div></div>
@@ -549,7 +552,7 @@ function renderGroup(el){
     const cls=allC.filter(c=>c.vendedor===v);
     const rip=v.startsWith('P_');const rav=monthAvp(rip);
     let rM=0,rV=0,rE=0,rProm=0;
-    cls.forEach(c=>{BR.forEach(b=>{rM+=(c['meta_'+b]||0)*4;rProm+=(c['prom_'+b]||0);});const vt=cVT(c.cod);let cv2=0;BR.forEach(b=>{const vl=vt['venta_'+b]||0;rV+=vl;cv2+=vl;});const cm=BR.reduce((s,b)=>s+(c['meta_'+b]||0)*4,0);if(cm>0&&Math.round(cv2/cm*100)>=100)rE++;});
+    cls.forEach(c=>{BR.forEach(b=>{rM+=(c['meta_'+b]||0)*semsN();rProm+=(c['prom_'+b]||0);});const vt=cVT(c.cod);let cv2=0;BR.forEach(b=>{const vl=vt['venta_'+b]||0;rV+=vl;cv2+=vl;});const cm=BR.reduce((s,b)=>s+(c['meta_'+b]||0)*semsN(),0);if(cm>0&&Math.round(cv2/cm*100)>=100)rE++;});
     const rCumpl=rM>0?Math.round(rV/rM*100):0;const rcl=ccS(rCumpl);
     return`<div class="rcard" onclick="navRoute('${v}')">
       <div class="rcard-top"><span class="rcard-name">${v}</span><span>${emo(tl(rCumpl,rav.pct))}</span></div>
@@ -566,7 +569,7 @@ function renderRoute(el){
   const vend=curVend;const clients=Object.values(metas).filter(m=>m.vendedor===vend);
   const ip=vend.startsWith('P_');const av=monthAvp(ip);
   let rM=0,rV=0,rE=0,rProm=0;
-  clients.forEach(c=>{BR.forEach(b=>{rM+=(c['meta_'+b]||0)*4;rProm+=(c['prom_'+b]||0);});const vt=cVT(c.cod);let cv2=0;BR.forEach(b=>{const vl=vt['venta_'+b]||0;rV+=vl;cv2+=vl;});const cm=BR.reduce((s,b)=>s+(c['meta_'+b]||0)*4,0);if(cm>0&&Math.round(cv2/cm*100)>=100)rE++;});
+  clients.forEach(c=>{BR.forEach(b=>{rM+=(c['meta_'+b]||0)*semsN();rProm+=(c['prom_'+b]||0);});const vt=cVT(c.cod);let cv2=0;BR.forEach(b=>{const vl=vt['venta_'+b]||0;rV+=vl;cv2+=vl;});const cm=BR.reduce((s,b)=>s+(c['meta_'+b]||0)*semsN(),0);if(cm>0&&Math.round(cv2/cm*100)>=100)rE++;});
   const rCumpl=rM>0?Math.round(rV/rM*100):0;const rcl=ccS(rCumpl);const falt=Math.max(0,rM-rV);
   const grupo=clients[0]?.grupo||'';
   const summHtml=`<div class="route-summ">
@@ -653,6 +656,8 @@ function renderClient(el){
 }
 // ── RANKING ──
 function renderRanking(){
+  const siEl=document.getElementById('rank-sems-info');
+  if(siEl){const n=semsN();siEl.textContent=n<4?`📊 Calculado con ${n} de 4 semanas cargadas — ranking parcial`:'📊 Campaña completa (4/4 semanas)';}
   const rkc=document.getElementById('rkc');if(!rkc)return;
   if(!loaded){rkc.innerHTML='<div class="errbox">⚠️ Sin datos de ventas para calcular ranking.</div>';return;}
   const vds=[...new Set(Object.values(metas).map(m=>m.vendedor))].sort();

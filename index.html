@@ -413,7 +413,12 @@ function parseCSV(txt){
     if(!ventas[sem])ventas[sem]={};
     ventas[sem][cod]={venta_gourmet:parseInt(c[iG])||0,venta_cocadas:parseInt(c[iCo])||0,venta_pomgur:parseInt(c[iP])||0,venta_cosmic:parseInt(c[iCs])||0,venta_yomax:parseInt(c[iY])||0,venta_arequipe:parseInt(c[iA])||0};n++;
   }
-  loaded=n>0;return loaded;
+  loaded=n>0;vendCache={};return loaded; // clear vendor cache on new data
+}
+let vendCache={};
+function vendMxCached(vend){
+  if(!vendCache[vend])vendCache[vend]=vendMx(vend);
+  return vendCache[vend];
 }
 async function fetchV(){
   try{const r=await fetch(SURL);if(!r.ok)throw new Error('HTTP '+r.status);const t=await r.text();if(parseCSV(t))setConn(true,'Google Sheets');else setConn(false,'Sin datos');}
@@ -476,7 +481,7 @@ function vendMx(vend){
   const cls=Object.values(metas).filter(m=>m.vendedor===vend);if(!cls.length)return null;
   const grupo=cls[0].grupo;const ip=grupo.startsWith('P_');
   const bm={},bv={};let pt=0;BR.forEach(b=>{bm[b]=0;bv[b]=0;});
-  cls.forEach(c=>{BR.forEach(b=>{bm[b]+=(c['meta_'+b]||0)*semsN();pt+=(c['prom_'+b]||0);});const vt=cVT(c.cod);BR.forEach(b=>{bv[b]+=vt['venta_'+b]||0;});});
+  cls.forEach(c=>{BR.forEach(b=>{bm[b]+=(c['meta_'+b]||0)*semsN();pt+=(c['prom_'+b]||0)*4;});const vt=cVT(c.cod);BR.forEach(b=>{bv[b]+=vt['venta_'+b]||0;});});
   const bd={};let mt=0,vt=0;
   BR.forEach(b=>{const pct=bm[b]>0?Math.round(bv[b]/bm[b]*100):null;bd[b]={meta:bm[b],vta:bv[b],pct};mt+=bm[b];vt+=bv[b];});// vt includes all brands (bonus too)
   const cumpl=mt>0?Math.round(vt/mt*100):100;
@@ -491,7 +496,7 @@ function vendMx(vend){
 function grpMx(grupo,clients){
   const ip=grupo.startsWith('P_');let prom=0,gM=0,gV=0,gE=0;
   clients.forEach(c=>{
-    BR.forEach(b=>{prom+=(c['prom_'+b]||0);gM+=(c['meta_'+b]||0)*semsN();});
+    BR.forEach(b=>{prom+=(c['prom_'+b]||0)*4;gM+=(c['meta_'+b]||0)*semsN();});
     const vt=cVT(c.cod);let cv2=0;BR.forEach(b=>{const v=vt['venta_'+b]||0;gV+=v;cv2+=v;});
     const cM=BR.reduce((s,b)=>s+(c['meta_'+b]||0)*semsN(),0);
     if(cM>0&&Math.round(cv2/cM*100)>=100)gE++;
@@ -542,7 +547,7 @@ function renderHome(el){
   const{rol,scope}=curU;let grupos=['A_TAT','P_PER','P_MZL'];if(rol==='Coordinador')grupos=[scope];
   const allC=Object.values(metas).filter(m=>grupos.includes(m.grupo));
   let gM=0,gV=0,gP=0,gE=0;
-  allC.forEach(c=>{BR.forEach(b=>{gP+=(c['prom_'+b]||0);gM+=(c['meta_'+b]||0)*semsN();});const vt=cVT(c.cod);let cv2=0;BR.forEach(b=>{const v=vt['venta_'+b]||0;gV+=v;cv2+=v;});const cm=BR.reduce((s,b)=>s+(c['meta_'+b]||0)*semsN(),0);if(cm>0&&Math.round(cv2/cm*100)>=100)gE++;});
+  allC.forEach(c=>{BR.forEach(b=>{gP+=(c['prom_'+b]||0)*4;gM+=(c['meta_'+b]||0)*semsN();});const vt=cVT(c.cod);let cv2=0;BR.forEach(b=>{const v=vt['venta_'+b]||0;gV+=v;cv2+=v;});const cm=BR.reduce((s,b)=>s+(c['meta_'+b]||0)*semsN(),0);if(cm>0&&Math.round(cv2/cm*100)>=100)gE++;});
   const gCumpl=gM>0?Math.round(gV/gM*100):0;const avA=monthAvp(false);const avP=monthAvp(true);
   const gcl=tl(gCumpl,Math.round((avA.pct+avP.pct)/2));// avg avance for global
   const q=QQ[new Date().getDay()%QQ.length];
@@ -563,7 +568,7 @@ function renderGcard(g,clients){
   const gi=GI[g]||{name:g,tag:'?'};const{prom,gM,gV,gE,cumpl,avp,avEl,avTot,falt,ip}=grpMx(g,clients);
   const cl=tl(cumpl,avp);// TRAFFIC LIGHT based on avance
   const vds=[...new Set(clients.map(c=>c.vendedor))].sort();
-  let wv=null,wvP=999;vds.forEach(v=>{const vm=vendMx(v);if(vm&&vm.cumpl<wvP){wvP=vm.cumpl;wv=v;}});
+  let wv=null,wvP=999;vds.forEach(v=>{const vm=vendMxCached(v);if(vm&&vm.cumpl<wvP){wvP=vm.cumpl;wv=v;}});
   return`<div class="gcard" onclick="navGroup('${g}')">
     <div class="gcard-top"><div><div class="gcard-name">🌐 ${g}<span class="gtag">${gi.tag}</span></div><div class="gcard-sub">${gi.name} · ${vds.length} rutas · ${clients.length} clientes</div></div><span class="gpct ${cl}">${cumpl}%</span></div>
     <div class="gstats3"><div class="gs"><div class="gsv b">${fn(prom)}</div><div class="gsl">Prom. 3M</div></div><div class="gs"><div class="gsv">${fn(gM)}</div><div class="gsl">${semsLabel()}</div></div><div class="gs"><div class="gsv">${fn(gV)}</div><div class="gsl">Venta Acum.</div></div></div>
@@ -591,7 +596,7 @@ function renderGroup(el){
   const routeCards=vds.map(v=>{
     const cls2=allC.filter(c=>c.vendedor===v);const rip=v.startsWith('P_');const rav=monthAvp(rip);
     let rM=0,rV=0,rE=0,rProm=0;
-    cls2.forEach(c=>{BR.forEach(b=>{rM+=(c['meta_'+b]||0)*semsN();rProm+=(c['prom_'+b]||0);});const vt=cVT(c.cod);let cv2=0;BR.forEach(b=>{const vl=vt['venta_'+b]||0;rV+=vl;cv2+=vl;});const cm=BR.reduce((s,b)=>s+(c['meta_'+b]||0)*semsN(),0);if(cm>0&&Math.round(cv2/cm*100)>=100)rE++;});
+    cls2.forEach(c=>{BR.forEach(b=>{rM+=(c['meta_'+b]||0)*semsN();rProm+=(c['prom_'+b]||0)*4;});const vt=cVT(c.cod);let cv2=0;BR.forEach(b=>{const vl=vt['venta_'+b]||0;rV+=vl;cv2+=vl;});const cm=BR.reduce((s,b)=>s+(c['meta_'+b]||0)*semsN(),0);if(cm>0&&Math.round(cv2/cm*100)>=100)rE++;});
     const rCumpl=rM>0?Math.round(rV/rM*100):0;const rcl=tl(rCumpl,rav.pct);// TRAFFIC LIGHT
     return`<div class="rcard" onclick="navRoute('${v}')">
       <div class="rcard-top"><span class="rcard-name">${v}</span><span>${emo(rcl)}</span></div>
@@ -609,7 +614,7 @@ function renderRoute(el){
   const vend=curVend;const clients=Object.values(metas).filter(m=>m.vendedor===vend);
   const ip=vend.startsWith('P_');const av=monthAvp(ip);
   let rM=0,rV=0,rE=0,rProm=0;
-  clients.forEach(c=>{BR.forEach(b=>{rM+=(c['meta_'+b]||0)*semsN();rProm+=(c['prom_'+b]||0);});const vt=cVT(c.cod);let cv2=0;BR.forEach(b=>{const vl=vt['venta_'+b]||0;rV+=vl;cv2+=vl;});const cm=BR.reduce((s,b)=>s+(c['meta_'+b]||0)*semsN(),0);if(cm>0&&Math.round(cv2/cm*100)>=100)rE++;});
+  clients.forEach(c=>{BR.forEach(b=>{rM+=(c['meta_'+b]||0)*semsN();rProm+=(c['prom_'+b]||0)*4;});const vt=cVT(c.cod);let cv2=0;BR.forEach(b=>{const vl=vt['venta_'+b]||0;rV+=vl;cv2+=vl;});const cm=BR.reduce((s,b)=>s+(c['meta_'+b]||0)*semsN(),0);if(cm>0&&Math.round(cv2/cm*100)>=100)rE++;});
   const rCumpl=rM>0?Math.round(rV/rM*100):0;const rcl=tl(rCumpl,av.pct);// TRAFFIC LIGHT
   const falt=Math.max(0,rM-rV);const grupo=clients[0]?.grupo||'';
   const summHtml=`<div class="route-summ">
@@ -685,7 +690,7 @@ function renderRanking(){
   const rkc=document.getElementById('rkc');if(!rkc)return;
   if(!loaded){rkc.innerHTML='<div class="errbox">⚠️ Sin datos para calcular ranking.</div>';return;}
   let vds=[...new Set(Object.values(metas).map(m=>m.vendedor))].sort();
-  let ms=vds.map(v=>vendMx(v)).filter(Boolean);
+  let ms=vds.map(v=>vendMxCached(v)).filter(Boolean);
   // Apply group filter
   if(rankFilter!=='all')ms=ms.filter(m=>m.grupo===rankFilter);
   // Sort: brandsCompleted DESC → crec DESC
@@ -743,8 +748,14 @@ function doLogin(){
   if(usr.rol==='Admin')document.getElementById('abtn').classList.remove('hidden');
   if(usr.rol==='Admin')curView='home';
   else if(usr.rol==='Coordinador'){curView='group';curGroup=usr.scope;}
-  else{curView='route';curVend=usr.scope;const c=Object.values(metas).find(m=>m.vendedor===usr.scope);if(c)curGroup=c.grupo;}
-  fetchV();
+  else{curView='route';curVend=usr.scope;}
+  initAfterLogin(()=>{
+    if(curU.rol==='Vendedor'){
+      const c=Object.values(metas).find(m=>m.vendedor===curU.scope);
+      if(c)curGroup=c.grupo;
+    }
+    fetchV();
+  });
 }
 function doLogout(){curU=null;loaded=false;ventas={};curView='home';curGroup=null;curVend=null;curCod=null;cliSearch='';document.getElementById('lov').classList.remove('hidden');document.getElementById('app').classList.add('hidden');document.getElementById('lu').value='';document.getElementById('lp').value='';document.getElementById('abtn').classList.add('hidden');}
 document.getElementById('lp').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
@@ -798,7 +809,17 @@ async function refreshSheets(){
   if(btn){btn.disabled=false;btn.textContent='↻ Recargar datos desde Google Sheets';}
 }
 // ── INIT ──
-loadMetas();
+// Don't block page render — metas parsed after login in background
+function initAfterLogin(callback){
+  // Show loading hint
+  const mv=document.getElementById('mv');
+  if(mv)mv.innerHTML='<div class="loading"><div class="spin"></div><br>Preparando datos...</div>';
+  // Use setTimeout to allow UI to render first, then parse 830KB of data
+  setTimeout(()=>{
+    loadMetas();
+    callback();
+  },20);
+}
 </script>
 </body>
 </html>

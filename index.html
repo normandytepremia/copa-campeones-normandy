@@ -424,7 +424,7 @@ const QQ=['"El único límite es el que tú mismo te pones. Rompe las barreras y
 const USERS_TAG=document.getElementById('users-data');
 let USERS=JSON.parse(USERS_TAG.textContent);
 
-let metas={},ventas={},curU=null,curTab='seg',loaded=false;
+let metas={},ventas={},curU=null,curTab='seg',loaded=false,viewHtmlCache={};
 let curView='home',curGroup=null,curVend=null,curCod=null,cliSearch='',curCliSem='Total',rankFilter='all';
 
 // ── UTILS ──
@@ -458,7 +458,7 @@ function parseCSV(txt){
     if(!ventas[sem])ventas[sem]={};
     ventas[sem][cod]={venta_gourmet:parseInt(c[iG])||0,venta_cocadas:parseInt(c[iCo])||0,venta_pomgur:parseInt(c[iP])||0,venta_cosmic:parseInt(c[iCs])||0,venta_yomax:parseInt(c[iY])||0,venta_arequipe:parseInt(c[iA])||0};n++;
   }
-  loaded=n>0;vendCache={};cVTCacheMap={};return loaded; // clear vendor cache on new data
+  loaded=n>0;vendCache={};cVTCacheMap={};viewHtmlCache={};return loaded; // clear vendor cache on new data
 }
 let vendCache={},cVTCacheMap={};
 function cVTCached(cod){
@@ -574,7 +574,7 @@ function updateSemBar(){
 // ── NAVIGATION ──
 function navHome(){curView='home';curGroup=null;curVend=null;curCod=null;cliSearch='';renderView();window.scrollTo(0,0);}
 function navGroup(g){curView='group';curGroup=g;curVend=null;curCod=null;cliSearch='';renderView();window.scrollTo(0,0);}
-function navRoute(v){const c=Object.values(metas).find(m=>m.vendedor===v);if(c)curGroup=c.grupo;curView='route';curVend=v;curCod=null;cliSearch='';renderView();window.scrollTo(0,0);}
+function navRoute(v){const c=Object.values(metas).find(m=>m.vendedor===v);if(c)curGroup=c.grupo;curView='route';curVend=v;curCod=null;cliSearch='';delete viewHtmlCache['route__'+v];renderView();window.scrollTo(0,0);}
 function navClient(cod){curView='client';curCod=cod;renderView();window.scrollTo(0,0);}
 
 // ── BREADCRUMB ──
@@ -590,7 +590,21 @@ function renderBCR(){
 }
 
 // ── RENDER ──
-function renderView(){renderBCR();updateSemBar();const el=document.getElementById('mv');if(!el)return;if(curView==='home')renderHome(el);else if(curView==='group')renderGroup(el);else if(curView==='route')renderRoute(el);else if(curView==='client')renderClient(el);}
+function renderView(){
+  renderBCR();updateSemBar();
+  const el=document.getElementById('mv');if(!el)return;
+  // Use cached HTML for non-search, non-client views
+  const ckey=curView+'_'+(curGroup||'')+'_'+(curVend||'');
+  if(curView!=='client'&&!cliSearch&&viewHtmlCache[ckey]){
+    el.innerHTML=viewHtmlCache[ckey];return;
+  }
+  if(curView==='home')renderHome(el);
+  else if(curView==='group')renderGroup(el);
+  else if(curView==='route')renderRoute(el);
+  else if(curView==='client')renderClient(el);
+  // Cache the result (not client views - they depend on curCliSem)
+  if(curView!=='client'&&!cliSearch)viewHtmlCache[ckey]=el.innerHTML;
+}
 
 // ── HOME ──
 function renderHome(el){
@@ -702,14 +716,20 @@ function renderRoute(el){
       <td class="tc"><div class="minibar"><div class="minifill ${bcl}" style="width:${Math.min(100,mx.cumpl)}%"></div></div></td>
     </tr>`;
   }).join('');
-  const tblHtml=`<div class="brand-sec">
-    <div class="cli-toolbar"><input class="cli-search" placeholder="🔍 Buscar cliente..." value="${cliSearch}" oninput="cliSearch=this.value;renderRoute(document.getElementById('mv'))"></div>
+  // Render immediately without table, then fill table lazily
+  el.innerHTML=summHtml+brandHtml+`<div class="brand-sec">
+    <div class="cli-toolbar"><input class="cli-search" id="route-search" placeholder="🔍 Buscar cliente..." value="${cliSearch}" oninput="cliSearch=this.value;renderRoute(document.getElementById('mv'))"></div>
     <div class="tbl-wrap"><table class="ctbl">
       <thead><tr><th class="tc">#</th><th>Cliente</th><th class="tc">Venta</th><th class="tc">Meta</th><th class="tc">Cumplimiento</th><th class="tc">Avance</th></tr></thead>
-      <tbody>${rows||'<tr><td colspan="6" style="text-align:center;padding:18px;color:var(--dim)">Sin clientes</td></tr>'}</tbody>
+      <tbody id="route-tbody"><tr><td colspan="6" style="text-align:center;padding:14px;color:var(--dim)"><div class="spin" style="width:20px;height:20px;margin:0 auto 4px"></div>Cargando...</td></tr></tbody>
     </table></div>
   </div>`;
-  el.innerHTML=summHtml+brandHtml+tblHtml;
+  // Lazy load table rows after frame paint
+  const rowsSnap=rows;
+  requestAnimationFrame(()=>{
+    const tbody=document.getElementById('route-tbody');
+    if(tbody)tbody.innerHTML=rowsSnap||'<tr><td colspan="6" style="text-align:center;padding:18px;color:var(--dim)">Sin clientes</td></tr>';
+  });
 }
 
 // ── CLIENT ──
@@ -852,15 +872,26 @@ document.getElementById('csvf').addEventListener('change',function(){
 
 // ── DOWNLOAD HTML ──
 function precomputeAdmin(){
-  // Pre-warm caches for all vendors and groups after data loads
-  // Runs in background so first render is fast
-  requestIdleCallback?.(()=>{
+  const run=()=>{
+    // Step 1: warm vendor metric cache
     const allVds=[...new Set(Object.values(metas).map(m=>m.vendedor))];
     allVds.forEach(v=>vendMxCached(v));
-  })||setTimeout(()=>{
-    const allVds=[...new Set(Object.values(metas).map(m=>m.vendedor))];
-    allVds.forEach(v=>vendMxCached(v));
-  },500);
+    // Step 2: warm cVT cache for all clients
+    Object.keys(metas).forEach(cod=>cVTCached(cod));
+    // Step 3: pre-render group HTML into viewHtmlCache
+    ['A_TAT','P_PER','P_MZL'].forEach(g=>{
+      const key='group_'+g+'_';
+      if(!viewHtmlCache[key]&&curU){
+        const fakeEl=document.createElement('div');
+        const savedGroup=curGroup,savedView=curView;
+        curView='group';curGroup=g;
+        renderGroup(fakeEl);
+        viewHtmlCache[key]=fakeEl.innerHTML;
+        curView=savedView;curGroup=savedGroup;
+      }
+    });
+  };
+  (requestIdleCallback||setTimeout)(run,500);
 }
 async function refreshSheets(){
   const btn=document.getElementById('refresh-btn');

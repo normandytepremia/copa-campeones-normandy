@@ -1754,8 +1754,7 @@ async function runDebug() {
     lines.push('❌ Error: ' + e.message);
   }
 
-  box.textContent = lines.join('
-');
+  box.textContent = lines.join('\n');
   status.textContent = 'Diagnóstico completado';
 }
 

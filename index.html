@@ -1298,6 +1298,12 @@ function renderAdminResumen() {
     Luego asegúrate de que las pestañas se llamen exactamente <code>${SHEET_VENDEDORES}</code> y <code>${SHEET_CLIENTES}</code>, y que el spreadsheet esté publicado como CSV.</div>`;
   }
 
+  html += `<div style="margin-bottom:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+    <button class="btn btn-navy btn-sm" onclick="runDebug()">🔍 Diagnosticar Sheets</button>
+    <span id="debugStatus" style="font-size:12px;color:var(--muted)">Filas cargadas: VENDEDORES=${S.vd.length} · CLIENTES=${S.cd.length}</span>
+  </div>
+  <div id="debugBox" style="display:none;background:#1a2535;color:#a8d8a8;font-family:monospace;font-size:12px;padding:14px;border-radius:8px;margin-bottom:14px;white-space:pre-wrap;overflow-x:auto;max-height:260px;overflow-y:auto"></div>`;
+
   if (ci.notStarted) {
     const d = Math.ceil((C_START - new Date()) / 86400000);
     html += `<div class="not-started"><span class="emoji">⏳</span><h2>La campaña inicia en ${d} días</h2><p>1 de junio de 2026 · ¡Prepara a tu equipo campeón!</p></div>`;
@@ -1687,6 +1693,70 @@ function downloadHTML() {
   a.download = 'copa-elite-2026.html';
   a.click();
   URL.revokeObjectURL(a.href);
+}
+
+/* ============================================================
+   DEBUG
+============================================================ */
+async function runDebug() {
+  const box = document.getElementById('debugBox');
+  const status = document.getElementById('debugStatus');
+  box.style.display = 'block';
+  box.textContent = '⏳ Conectando con Google Sheets...';
+  status.textContent = '';
+
+  const lines = [];
+  lines.push('=== CONFIGURACIÓN ===');
+  lines.push('SHEET_ID: ' + SHEET_ID);
+  lines.push('Pestaña VENDEDORES: ' + SHEET_VENDEDORES);
+  lines.push('Pestaña CLIENTES: ' + SHEET_CLIENTES);
+  lines.push('');
+
+  // Test VENDEDORES
+  lines.push('=== PROBANDO PESTAÑA VENDEDORES ===');
+  try {
+    const rows = await fetchSheetJSONP(SHEET_VENDEDORES);
+    lines.push('✅ Respuesta recibida: ' + rows.length + ' filas');
+    if (rows.length > 0) {
+      lines.push('Columnas detectadas: ' + Object.keys(rows[0]).join(', '));
+      lines.push('Primera fila: ' + JSON.stringify(rows[0]));
+      const missingMeta  = META_COLS.filter(c => !(c in rows[0]));
+      const missingVenta = VENTA_COLS.filter(c => !(c in rows[0]));
+      if (missingMeta.length)  lines.push('❌ Columnas de meta faltantes: ' + missingMeta.join(', '));
+      if (missingVenta.length) lines.push('❌ Columnas de venta faltantes: ' + missingVenta.join(', '));
+      if (!missingMeta.length && !missingVenta.length) lines.push('✅ Todas las columnas OK');
+      if (!('GRUPO' in rows[0]))    lines.push('❌ Falta columna GRUPO');
+      if (!('VENDEDOR' in rows[0])) lines.push('❌ Falta columna VENDEDOR');
+      if (!('SEMANA' in rows[0]))   lines.push('❌ Falta columna SEMANA');
+    } else {
+      lines.push('⚠️  0 filas — revisa: nombre de pestaña, datos en el sheet, y permisos de lectura');
+    }
+  } catch(e) {
+    lines.push('❌ Error: ' + e.message);
+  }
+
+  lines.push('');
+  lines.push('=== PROBANDO PESTAÑA CLIENTES ===');
+  try {
+    const rows = await fetchSheetJSONP(SHEET_CLIENTES);
+    lines.push('Respuesta recibida: ' + rows.length + ' filas');
+    if (rows.length > 0) {
+      lines.push('Columnas detectadas: ' + Object.keys(rows[0]).join(', '));
+      if (!('CLIENTE' in rows[0]))  lines.push('❌ Falta columna CLIENTE');
+      if (!('VENDEDOR' in rows[0])) lines.push('❌ Falta columna VENDEDOR');
+      const missingMeta  = META_COLS.filter(c => !(c in rows[0]));
+      if (missingMeta.length) lines.push('❌ Columnas faltantes: ' + missingMeta.join(', '));
+      if (!missingMeta.length) lines.push('✅ Todas las columnas OK');
+    } else {
+      lines.push('⚠️  0 filas — revisa nombre de pestaña y datos');
+    }
+  } catch(e) {
+    lines.push('❌ Error: ' + e.message);
+  }
+
+  box.textContent = lines.join('
+');
+  status.textContent = 'Diagnóstico completado';
 }
 
 /* ============================================================

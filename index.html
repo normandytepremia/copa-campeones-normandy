@@ -1031,7 +1031,11 @@ function fetchSheetJSONP(sheetName) {
     const cleanup = () => { delete window[cb]; if (s && s.parentNode) s.parentNode.removeChild(s); };
     window[cb] = function(data) {
       cleanup();
+      // Store raw response for debugging
+      if (typeof window._gvizRaw === 'undefined') window._gvizRaw = {};
+      window._gvizRaw[sheetName] = data;
       try {
+        if (!data || !data.table) { resolve([]); return; }
         const cols = data.table.cols.map(c => c.label || c.id || '');
         const rows = (data.table.rows || []).map(row => {
           const obj = {};
@@ -1714,6 +1718,20 @@ async function runDebug() {
 
   // Test VENDEDORES
   lines.push('=== PROBANDO PESTAÑA VENDEDORES ===');
+  // Show raw gviz response first
+  if (window._gvizRaw && window._gvizRaw[SHEET_VENDEDORES]) {
+    const raw = window._gvizRaw[SHEET_VENDEDORES];
+    lines.push('RAW status: ' + (raw.status || 'sin status'));
+    if (raw.errors) lines.push('RAW errors: ' + JSON.stringify(raw.errors));
+    if (raw.table) {
+      lines.push('RAW cols: ' + JSON.stringify(raw.table.cols ? raw.table.cols.map(c=>c.label||c.id) : 'none'));
+      lines.push('RAW rows count: ' + (raw.table.rows ? raw.table.rows.length : 0));
+      if (raw.table.rows && raw.table.rows.length > 0) lines.push('RAW fila 1: ' + JSON.stringify(raw.table.rows[0]));
+    } else {
+      lines.push('RAW sin tabla — keys: ' + Object.keys(raw).join(', '));
+    }
+    lines.push('');
+  };
   try {
     const rows = await fetchSheetJSONP(SHEET_VENDEDORES);
     lines.push('✅ Respuesta recibida: ' + rows.length + ' filas');

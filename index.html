@@ -358,8 +358,14 @@ function monthAvp(preventa) {
   var now = new Date(); now.setHours(0,0,0,0);
   var s = new Date(2026,5,1), e = new Date(2026,5,28);
   var tot = daysWorked(s, e, preventa);
+  // If campaign not started yet, estimate avance from loaded weeks data
+  if (now < s) {
+    var n = semsLoaded();
+    // Each week is ~25% of the month
+    return { pct: Math.round(n/4*100), el: n, tot: 4, precamp: true };
+  }
   var yest = new Date(now); yest.setDate(yest.getDate()-1);
-  var elapsed = yest < s ? 0 : (yest > e ? tot : daysWorked(s, yest, preventa));
+  var elapsed = yest > e ? tot : daysWorked(s, yest < s ? s : yest, preventa);
   return { pct: tot>0?Math.round(elapsed/tot*100):0, el: elapsed, tot: tot };
 }
 function semAvp(sk, preventa) {
@@ -395,7 +401,7 @@ function parseCSV(txt) {
     var vend   = (cols[1]||'').trim();
     var cod    = (cols[2]||'').trim();
     var nombre = (cols[3]||'').trim();
-    var sem    = (cols[17]||'').trim() || 'Sem 1';
+    var sem    = (cols[16]||'').trim() || 'Sem 1';
     if (!cod) continue;
     if (!newMetas[cod]) {
       newMetas[cod] = {
@@ -610,13 +616,38 @@ function renderHome(el) {
   var rol = curU.rol, scope = curU.scope;
   var grupos = rol==='Coordinador' ? [scope] : ['A_TAT','P_PER','P_MZL'];
   var allC = Object.values(metas).filter(function(m){return grupos.indexOf(m.grupo)>=0;});
-  var avA = monthAvp(false), avP = monthAvp(true);
   var q = QQ[new Date().getDay() % QQ.length];
   var html = '<div class="avbar"><span style="font-size:1.2rem">⭐</span><div>'
     + '<div style="font-style:italic;font-size:.93rem">'+q+'</div>'
     + '<div style="font-size:.7rem;opacity:.6;text-transform:uppercase;letter-spacing:1px;margin-top:2px">NORMANDY · CANAL TR · JUNIO 2026</div>'
     + '</div></div>';
   if (!loaded) html += '<div class="errbox">⚠️ Sin datos. Conectando con Google Sheets...</div>';
+
+  // ── RESUMEN CANAL (Admin only) ──
+  if (rol === 'Admin' && loaded) {
+    var canalM=0, canalV=0, canalE=0, canalTotal=allC.length;
+    var avpA = monthAvp(false), avpP = monthAvp(true);
+    grupos.forEach(function(g) {
+      var gc = allC.filter(function(c){return c.grupo===g;});
+      var mx = grpMx(g, gc);
+      canalM += mx.gM; canalV += mx.gV;
+    });
+    allC.forEach(function(c) {
+      var cc = cliCumpl(c.cod); if(cc&&cc.eligible) canalE++;
+    });
+    var canalPct = canalM>0?Math.round(canalV/canalM*100):0;
+    var avpCanal = monthAvp(false).pct; // use TAT avp as reference
+    var clCanal  = clr(canalPct, avpCanal);
+    html += '<div class="sec-hdr">📊 Resumen Canal TR</div>';
+    html += '<div class="statsrow" style="margin-bottom:20px;">'
+      +'<div class="scard"><div class="sv blue">'+fn(canalM)+'</div><div class="sl">Meta Canal ('+semsLabel()+')</div></div>'
+      +'<div class="scard"><div class="sv blue">'+fn(canalV)+'</div><div class="sl">Venta Acumulada</div></div>'
+      +'<div class="scard"><div class="sv '+clCanal+'">'+canalPct+'%</div><div class="sl">Cumplimiento Canal</div></div>'
+      +'<div class="scard"><div class="sv blue">'+avpCanal+'%</div><div class="sl">Avance esperado</div><div class="ss">'+(avpA.precamp?'Sem '+avpA.el+'/4':'Día '+avpA.el+'/'+avpA.tot)+'</div></div>'
+      +'<div class="scard"><div class="sv blue">'+canalE+'/'+canalTotal+'</div><div class="sl">Clientes en meta</div><div class="ss">'+Math.round(canalE/canalTotal*100||0)+'% del canal</div></div>'
+      +'<div class="scard"><div class="sv blue">'+Object.keys(ventasVend).length+'</div><div class="sl">Rutas activas (Hoja 2)</div></div>'
+      +'</div>';
+  }
   html += '<div class="sec-hdr">🌐 Grupos de Venta</div>';
   html += '<div class="ggroups">';
   grupos.forEach(function(g) {
@@ -675,7 +706,7 @@ function renderGroup(el) {
   var html = '<div class="statsrow">'
     +'<div class="scard"><div class="sv blue">'+fn(mx.gM)+'</div><div class="sl">'+semsLabel()+'</div></div>'
     +'<div class="scard"><div class="sv '+clr(mx.cumpl,mx.avp)+'">'+mx.cumpl+'%</div><div class="sl">Cumplimiento</div></div>'
-    +'<div class="scard"><div class="sv blue">'+avObj.pct+'%</div><div class="sl">Avance mes (día '+avObj.el+'/'+avObj.tot+')</div></div>'
+    +'<div class="scard"><div class="sv blue">'+avObj.pct+'%</div><div class="sl">Avance '+(avObj.precamp?'(Sem '+avObj.el+'/4)':'mes (día '+avObj.el+'/'+avObj.tot+')')+'</div></div>'
     +'<div class="scard"><div class="sv blue">'+fn(mx.gE)+'/'+clients.length+'</div><div class="sl">Clientes en meta</div></div>'
     +'</div>'
     +'<div class="sec-hdr">👤 Rutas</div>'

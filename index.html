@@ -283,6 +283,8 @@ header{background:var(--blue);color:#fff;padding:0 16px;position:sticky;top:0;z-
       <span id="csvs" style="font-size:.8rem;margin-left:8px;"></span>
     </div>
     <button onclick="downloadHTML()" style="margin-top:16px;padding:8px 18px;background:var(--blue);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:600;">💾 Descargar HTML actualizado</button>
+    <button onclick="showDebug()" style="margin-top:8px;margin-left:8px;padding:8px 18px;background:#64748b;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:600;">🔍 Debug CSV</button>
+    <pre id="debug-out" style="margin-top:12px;font-size:.72rem;background:#f1f5f9;padding:12px;border-radius:8px;overflow-x:auto;max-height:300px;overflow-y:auto;display:none;white-space:pre-wrap;word-break:break-all;"></pre>
   </div>
 </div>
 
@@ -900,6 +902,47 @@ function renderCP() {
     +'<div class="cpcard"><h3>🎁 Premio para clientes</h3>'
     +'<p>El cliente que cumpla el <strong>100% de su meta en todas las marcas</strong> gana una ancheta. La meta del cliente es el promedio semanal de unidades por marca.</p></div>';
 }
+
+// ── DEBUG ──
+function showDebug() {
+  var out = document.getElementById('debug-out');
+  if (!out) return;
+  out.style.display = 'block';
+  var info = '';
+  // Hoja 1 info
+  info += '=== HOJA 1 (metas/ventas) ===\n';
+  info += 'Clientes cargados: ' + Object.keys(metas).length + '\n';
+  info += 'Semanas con datos: ' + Object.keys(ventas).join(', ') + '\n';
+  if (Object.keys(ventas).length > 0) {
+    var firstSem = Object.keys(ventas)[0];
+    var firstCod = Object.keys(ventas[firstSem])[0];
+    info += 'Muestra ' + firstSem + ' cod ' + firstCod + ': ' + JSON.stringify(ventas[firstSem][firstCod]) + '\n';
+  }
+  // Check if any venta is non-zero
+  var nonZero = 0;
+  Object.keys(ventas).forEach(function(s) {
+    Object.keys(ventas[s]).forEach(function(cod) {
+      var sv = ventas[s][cod];
+      if (sv.venta_gourmet||sv.venta_cocadas||sv.venta_pomgur||sv.venta_cosmic||sv.venta_yomax||sv.venta_arequipe) nonZero++;
+    });
+  });
+  info += 'Filas con venta > 0 en Hoja 1: ' + nonZero + '\n\n';
+  // Hoja 2 info
+  info += '=== HOJA 2 (ventasVend) ===\n';
+  info += 'Vendedores cargados: ' + Object.keys(ventasVend).length + '\n';
+  Object.keys(ventasVend).slice(0,5).forEach(function(v) {
+    info += v + ': ' + JSON.stringify(ventasVend[v]) + '\n';
+  });
+  // First client detail
+  if (Object.keys(metas).length > 0) {
+    var cod0 = Object.keys(metas)[0];
+    info += '\n=== PRIMER CLIENTE cod=' + cod0 + ' ===\n';
+    info += 'Meta: ' + JSON.stringify(metas[cod0]) + '\n';
+    info += 'Venta Total: ' + JSON.stringify(cliVenta(cod0,'Total')) + '\n';
+  }
+  out.textContent = info;
+}
+
 
 // ── LOGIN / LOGOUT ──
 function doLogin() {

@@ -450,7 +450,7 @@ function fetchV() {
   return fetch(SURL)
     .then(function(r) { if(!r.ok) throw new Error(r.status); return r.text(); })
     .then(function(t) {
-      if (parseCSV(t)) { setConn(true,'Google Sheets'); precomputeAdmin(); }
+      if (parseCSV(t)) { setConn(true,'Google Sheets'); }
       else setConn(false,'Sin datos');
     })
     .catch(function(e) { setConn(false,'Sin conexión'); console.warn('fetchV:',e); });
@@ -467,8 +467,10 @@ function fetchAll() {
   return Promise.all([fetchV(), fetchV2()])
     .then(function() {
       viewHtmlCache = {};
+      vendCache = {};       // clear stale cache so vendMxCached re-reads fresh ventasVend
       renderView();
       if (curTab === 'rank') renderRanking();
+      setTimeout(precomputeAdmin, 200); // precompute AFTER both sheets loaded
     });
 }
 

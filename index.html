@@ -332,7 +332,7 @@ var metas = {}, ventas = {}, ventasVend = {};
 var curU = null, curView = 'home', curGroup = null, curVend = null;
 var curCod = null, curCliSem = 'Total', curTab = 'seg';
 var rankFilter = 'Canal', loaded = false, cliSearch = '';
-var vendCache = {}, viewHtmlCache = {};
+var vendCache = {}, viewHtmlCache = {}, cliCache = {};
 
 // ── UTILS ──
 function fn(n) { return Math.round(n).toLocaleString('es-CO'); }
@@ -422,7 +422,7 @@ function parseCSV(txt) {
   if (!hasMetas) return false;
   metas = newMetas; ventas = newVentas;
   loaded = Object.keys(metas).length > 0;
-  vendCache = {}; viewHtmlCache = {};
+  vendCache = {}; viewHtmlCache = {}; cliCache = {};
   return loaded;
 }
 
@@ -497,18 +497,23 @@ function cliVenta(cod, sem) {
 
 function cliMeta(cod) { return metas[String(cod)] || null; }
 
-function cliCumpl(cod) {
+function cliCumplCalc(cod) {
   var m = cliMeta(cod); if (!m) return null;
   var totM = 0, totV = 0, allOk = true;
   var sv = cliVenta(cod,'Total');
+  var n = semsLoaded();
   BR.forEach(function(b) {
-    var meta = (m['meta_'+b]||0) * semsLoaded();
+    var meta = (m['meta_'+b]||0) * n;
     var vta  = sv['venta_'+b]||0;
     totM += meta; totV += vta;
     if (meta > 0 && vta < meta) allOk = false;
   });
   var pct = totM > 0 ? Math.round(totV/totM*100) : 0;
   return { pct:pct, totM:totM, totV:totV, eligible:(totM>0&&allOk) };
+}
+function cliCumpl(cod) {
+  if (!cliCache[cod]) cliCache[cod] = cliCumplCalc(cod);
+  return cliCache[cod];
 }
 
 function grpMx(grupo, clients) {
@@ -761,36 +766,72 @@ function renderRoute(el) {
   }
   html += '<div class="sec-hdr">👥 Clientes ('+clients.length+')</div>';
   html += '<input class="csearch" id="csearch" placeholder="Buscar cliente..." value="'+cliSearch+'">';
-  html += renderClientTable(clients);
+  cliPage = 0;
+  var tblResult = renderClientTable(clients, 0);
+  html += tblResult.html;
   el.innerHTML = html;
+
+  // attach search with debounce
+  var searchTimer;
   var cs = document.getElementById('csearch');
-  if (cs) cs.oninput = function() { cliSearch = this.value; renderRoute(el); };
-  el.querySelectorAll('.ctbl-row[data-cod]').forEach(function(row) {
-    row.onclick = function() {
-      curCod = this.getAttribute('data-cod');
-      curCliSem = 'Total';
-      curView = 'client';
-      renderView(); window.scrollTo(0,0);
-    };
-  });
+  if (cs) cs.oninput = function() {
+    clearTimeout(searchTimer);
+    var val = this.value;
+    searchTimer = setTimeout(function() {
+      cliSearch = val; cliPage = 0; renderRoute(el);
+    }, 250);
+  };
+
+  // attach row clicks
+  function bindRows() {
+    el.querySelectorAll('.ctbl-row[data-cod]').forEach(function(row) {
+      row.onclick = function() {
+        curCod = this.getAttribute('data-cod');
+        curCliSem = 'Total'; curView = 'client';
+        renderView(); window.scrollTo(0,0);
+      };
+    });
+  }
+  bindRows();
+
+  // load-more button
+  var lmb = document.getElementById('load-more-btn');
+  if (lmb) lmb.onclick = function() {
+    cliPage++;
+    var r2 = renderClientTable(clients, cliPage);
+    var tblEl = el.querySelector('.ctbl');
+    if (tblEl) { tblEl.outerHTML = r2.html; bindRows();
+      var lmb2 = document.getElementById('load-more-btn');
+      if (lmb2) lmb2.onclick = arguments.callee; }
+  };
 }
 
-function renderClientTable(clients) {
-  var filtered = cliSearch
-    ? clients.filter(function(c){return c.nombre.toLowerCase().indexOf(cliSearch.toLowerCase())>=0||String(c.cod).indexOf(cliSearch)>=0;})
+var cliPage = 0;
+var CLI_PAGE_SIZE = 50;
+function renderClientTable(clients, page) {
+  page = page || 0;
+  var q = cliSearch.toLowerCase();
+  var filtered = q
+    ? clients.filter(function(c){return c.nombre.toLowerCase().indexOf(q)>=0||String(c.cod).indexOf(q)>=0;})
     : clients;
   filtered.sort(function(a,b) {
     var ca=cliCumpl(a.cod), cb=cliCumpl(b.cod);
     return (cb?cb.pct:0)-(ca?ca.pct:0);
   });
+  var total = filtered.length;
+  var pageEnd = Math.min((page+1)*CLI_PAGE_SIZE, total);
+  var slice = filtered.slice(0, pageEnd);
   var n = semsLoaded();
+  var ip = clients[0] ? clients[0].grupo.startsWith('P_') : false;
+  var av = monthAvp(ip).pct;
   var html = '<div class="ctbl">'
-    +'<div class="ctbl-hdr"><div>Cliente</div><div style="text-align:right">Meta ('+n+' sem)</div><div style="text-align:right">Venta</div><div style="text-align:right">Cumpl.</div></div>';
-  filtered.forEach(function(c) {
+    +'<div class="ctbl-hdr"><div>Cliente ('+total+')</div>'
+    +'<div style="text-align:right">Meta ('+n+' sem)</div>'
+    +'<div style="text-align:right">Venta</div>'
+    +'<div style="text-align:right">Cumpl.</div></div>';
+  slice.forEach(function(c) {
     var cc = cliCumpl(c.cod);
     var pct = cc?cc.pct:0, totM=cc?cc.totM:0, totV=cc?cc.totV:0;
-    var ip = c.grupo.startsWith('P_');
-    var av = monthAvp(ip).pct;
     var cl = clr(pct,av);
     html += '<div class="ctbl-row" data-cod="'+c.cod+'">'
       +'<div><div class="ctbl-name">'+c.nombre+'</div><div class="ctbl-cod">'+c.cod+'</div></div>'
@@ -799,8 +840,13 @@ function renderClientTable(clients) {
       +'<div class="ctbl-pct '+cl+'">'+pct+'%</div>'
       +'</div>';
   });
+  if (pageEnd < total) {
+    html += '<div id="load-more-btn" style="text-align:center;padding:14px;cursor:pointer;'
+      +'color:var(--blue2);font-weight:600;font-size:.88rem;border-top:1px solid var(--border)">'
+      +'▼ Ver más ('+pageEnd+'/'+total+')</div>';
+  }
   html += '</div>';
-  return html;
+  return { html:html, filtered:filtered, page:page };
 }
 
 // ── CLIENT ──
@@ -996,7 +1042,7 @@ function doLogin() {
     if(mc) curGroup=mc.grupo;
   }
   document.getElementById('mv').innerHTML='<div class="loading"><div class="spin"></div><br>Cargando datos de Google Sheets...</div>';
-  fetchAll().then(function(){ renderView(); });
+  fetchAll(); // fetchAll already calls renderView inside
 }
 
 function doLogout() {

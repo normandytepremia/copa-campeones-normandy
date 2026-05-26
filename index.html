@@ -155,19 +155,25 @@ header{background:var(--p);padding:0 24px;height:58px;display:flex;align-items:c
   justify-content:space-between;font-size:12px;font-weight:700;color:var(--p);background:rgba(8,43,115,.02)}
 .gc2ft:hover{background:rgba(8,43,115,.05)}
 
-/* ═══════════════ VENDEDOR CARDS ═══════════════ */
-.vg{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:16px}
-.vc{background:#fff;border-radius:var(--r);padding:20px;box-shadow:var(--sh);cursor:pointer;
+/* ═══════════════ VENDEDOR CARDS v2 ═══════════════ */
+.vg{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+.vc2{background:#fff;border-radius:var(--r);padding:16px 18px;box-shadow:var(--sh);cursor:pointer;
   transition:transform .15s,box-shadow .15s;border:1px solid var(--bdr)}
-.vc:hover{transform:translateY(-2px);box-shadow:var(--sh2);border-color:var(--p2)}
-.vch{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
-.vcn{font-family:'Oswald',sans-serif;font-size:19px;font-weight:600;color:var(--p)}
-.vcnt{font-size:11px;color:var(--muted);background:var(--bg);padding:3px 10px;border-radius:12px}
-.mok{font-size:11px;font-weight:700;color:#fff;padding:2px 8px;border-radius:4px;margin-bottom:10px;display:inline-block}
-.mok.bad{background:var(--bad)}.mok.ok{background:var(--ok)}
-.vtotal{margin-top:8px;text-align:right}
-.vtotaln{font-family:'Oswald',sans-serif;font-size:22px;font-weight:700}
-.vtotals{font-size:11px;color:var(--muted);margin-left:3px}
+.vc2:hover{transform:translateY(-2px);box-shadow:var(--sh2);border-color:var(--p2)}
+.vc2h{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px}
+.vc2n{font-family:'Oswald',sans-serif;font-size:18px;font-weight:700;color:var(--p)}
+.vc2dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.vc2sub{font-size:11px;color:var(--muted);margin-bottom:10px}
+.vc2av{font-size:11px;color:var(--muted);margin-bottom:6px}
+.vc2pct{font-family:'Oswald',sans-serif;font-size:34px;font-weight:700;line-height:1;margin-bottom:12px}
+.vc2stats{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted);
+  border-top:1px solid var(--bdr);padding-top:10px;margin-top:2px}
+.vc2stats span b{color:var(--txt)}
+
+/* ═══════════════ VENDEDORES SECTION HEADER ═══════════════ */
+.vsec{display:flex;align-items:center;gap:8px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--bdr)}
+.vsecl{font-family:'Oswald',sans-serif;font-size:13px;font-weight:700;color:var(--p);text-transform:uppercase;letter-spacing:.5px}
+.vsecsub{font-size:12px;color:var(--muted)}
 
 /* ═══════════════ CLIENTES TABLE ═══════════════ */
 .sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
@@ -782,24 +788,75 @@ function renderGCard(gk,av){
 /* Nivel 1: Vendedores */
 function renderVendedores(gk){
   const gd=D[gk]; if(!gd)return'<p>Sin datos</p>';
-  const cards=Object.entries(gd.vs).map(([vk,vd])=>{
-    const tp=totPct(vd.m); const cl=cls(tp);
-    const mo=mOk(vd.m); const mc=mCon(vd.m);
-    const nc=Object.keys(vd.cs).length;
-    return `<div class="vc" onclick="navTo('clientes','${gk}','${vk}')">
-      <div class="vch">
-        <span class="vcn">${vk}</span>
-        <span class="vcnt">${nc} clientes</span>
+  const av=calcAvanceMes();
+  const info=GINFO[gk]||{zona:gk,tipo:'AV'};
+  const {meta,venta,pct}=gTotals(gd);
+  const avPct=info.tipo==='AV'?av.a.pct:av.p.pct;
+  const avEl=info.tipo==='AV'?av.a.el:av.p.el;
+  const avTot=info.tipo==='AV'?av.a.tot:av.p.tot;
+  const avLabel=info.tipo==='AV'?'Lun–Vie':'Lun–Sab';
+  const nv=Object.keys(gd.vs).length;
+
+  // 4 KPIs del grupo
+  const kpis=`
+    <div class="kgrid">
+      <div class="kc">
+        <div class="kn">${fmt(meta)}</div>
+        <div class="kl">Meta de Unidades</div>
+        <div class="ks">Total del grupo</div>
       </div>
-      <div class="mok ${mo===mc&&mc>0?'ok':'bad'}">${mo}/${mc} marcas ✓</div>
-      ${brandBars(vd.m)}
-      <div class="vtotal">
-        <span class="vtotaln" style="color:${cval(cl)}">${tp}%</span>
-        <span class="vtotals">cumplimiento</span>
+      <div class="kc">
+        <div class="kn">${fmt(venta)}</div>
+        <div class="kl">Venta Real</div>
+        <div class="ks">Unidades acumuladas</div>
+      </div>
+      <div class="kc">
+        <div class="kn" style="color:${cval(cls(pct))}">${pct}%</div>
+        <div class="kl">Cumplimiento</div>
+        <div class="ks">${fmt(venta)} de ${fmt(meta)} und.</div>
+      </div>
+      <div class="kc">
+        <div class="kn">${avPct}%</div>
+        <div class="kl">Avance del Mes</div>
+        <div class="ks">Día ${avEl}/${avTot} · ${avLabel}</div>
+      </div>
+    </div>`;
+
+  // Encabezado de sección
+  const sec=`
+    <div class="vsec">
+      <span style="font-size:16px">🚛</span>
+      <span class="vsecl">Vendedores / Rutas</span>
+      <span class="vsecsub">${info.zona} · ${nv} vendedores</span>
+    </div>`;
+
+  // Tarjetas de vendedor
+  const cards=Object.entries(gd.vs).map(([vk,vd])=>{
+    const vt=gTotals(vd);
+    const nc=Object.keys(vd.cs).length;
+    // Clientes en meta: total unidades >= 100%
+    const enMeta=Object.values(vd.cs).filter(cd=>{
+      const t=gTotals(cd); return t.meta>0&&t.pct>=100;
+    }).length;
+    const ahead=vt.pct>=avPct;
+    const dotCol=ahead?'var(--ok)':'var(--bad)';
+    const pctCol=ahead?'var(--ok)':'var(--bad)';
+    const arrow=ahead?'↑':'↓';
+    return `<div class="vc2" onclick="navTo('clientes','${gk}','${vk}')">
+      <div class="vc2h">
+        <span class="vc2n">${vk}</span>
+        <span class="vc2dot" style="background:${dotCol}"></span>
+      </div>
+      <div class="vc2sub">${nc} clientes · ${enMeta} en meta</div>
+      <div class="vc2pct" style="color:${pctCol}">${arrow} ${vt.pct}%</div>
+      <div class="vc2stats">
+        <span>Meta: <b>${fmt(vt.meta)}</b></span>
+        <span>Venta: <b>${fmt(vt.venta)}</b></span>
       </div>
     </div>`;
   }).join('');
-  return `<div class="vg">${cards}</div>`;
+
+  return kpis+sec+`<div class="vg">${cards}</div>`;
 }
 
 /* Nivel 2: Clientes */

@@ -227,6 +227,50 @@ header{background:var(--p);padding:0 24px;height:58px;display:flex;align-items:c
 .pc.g{background:var(--ok-bg);color:var(--ok)}.pc.o{background:var(--warn-bg);color:var(--warn)}
 .pc.r{background:var(--bad-bg);color:var(--bad)}.pc.x{background:#f3f4f6;color:#9ca3af}
 
+/* ═══════════════ ADMIN HEADER BUTTONS ═══════════════ */
+.hbtn{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;
+  padding:5px 11px;border-radius:6px;font-size:11px;font-weight:600;transition:all .2s;white-space:nowrap}
+.hbtn:hover{background:rgba(255,255,255,.22)}
+.hbtn.gold{background:rgba(212,175,55,.18);border-color:rgba(212,175,55,.45);color:var(--gold2)}
+.hbtn.gold:hover{background:rgba(212,175,55,.32)}
+
+/* ═══════════════ MODAL ═══════════════ */
+.movl{position:fixed;inset:0;background:rgba(8,43,115,.45);z-index:200;
+  display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(2px)}
+.mo{background:#fff;border-radius:var(--r);width:100%;max-width:580px;
+  box-shadow:0 24px 80px rgba(0,0,0,.28);max-height:88vh;display:flex;flex-direction:column}
+.moh{padding:16px 22px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.moht{font-family:'Oswald',sans-serif;font-size:17px;font-weight:700;color:var(--p)}
+.mox{background:transparent;border:none;font-size:22px;color:var(--muted);cursor:pointer;line-height:1;padding:2px 6px}
+.mox:hover{color:var(--txt)}
+.mob{padding:16px 22px;overflow-y:auto;flex:1}
+.mof{padding:12px 22px;border-top:1px solid var(--bdr);display:flex;justify-content:flex-end;gap:10px;flex-shrink:0}
+.mbtn{padding:9px 22px;border-radius:var(--rs);border:none;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s}
+.mbtn.pri{background:var(--p);color:#fff}.mbtn.pri:hover{background:var(--p2)}
+.mbtn.sec{background:var(--bg);color:var(--txt);border:1px solid var(--bdr)}.mbtn.sec:hover{background:var(--bdr)}
+.pwnote{background:var(--warn-bg);border:1px solid var(--warn);border-radius:var(--rs);
+  padding:10px 14px;font-size:12px;color:var(--warn);margin-bottom:16px;line-height:1.5}
+.pwtab{width:100%;border-collapse:collapse}
+.pwtab th{text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;
+  color:var(--muted);padding:7px 10px;border-bottom:1px solid var(--bdr);background:var(--bg)}
+.pwtab td{padding:7px 10px;border-bottom:1px solid var(--bdr);font-size:13px;vertical-align:middle}
+.pwtab tr:last-child td{border-bottom:none}
+.pwtab tr:hover td{background:rgba(8,43,115,.02)}
+.pwinp{border:1.5px solid var(--bdr);border-radius:6px;padding:5px 10px;font-size:13px;
+  width:100%;outline:none;font-family:'Inter',sans-serif;background:#fff}
+.pwinp:focus{border-color:var(--p);box-shadow:0 0 0 2px rgba(8,43,115,.1)}
+.rolbadge{font-size:10px;font-weight:800;padding:2px 7px;border-radius:4px;text-transform:uppercase;letter-spacing:.3px}
+.rolbadge.admin{background:rgba(8,43,115,.1);color:var(--p)}
+.rolbadge.coord{background:var(--warn-bg);color:var(--warn)}
+.rolbadge.vend{background:var(--bg);color:var(--muted)}
+
+/* ═══════════════ TOAST ═══════════════ */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(16px);
+  background:#1e293b;color:#fff;padding:11px 20px;border-radius:8px;font-size:13px;font-weight:500;
+  opacity:0;transition:all .3s;z-index:400;white-space:nowrap;pointer-events:none;
+  box-shadow:0 4px 20px rgba(0,0,0,.25)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
 /* ═══════════════ RESPONSIVE ═══════════════ */
 @media(max-width:900px){.kgrid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:640px){
@@ -271,6 +315,11 @@ header{background:var(--p);padding:0 24px;height:58px;display:flex;align-items:c
       </div>
     </div>
     <div class="hright">
+      <div id="adminTools" style="display:none;align-items:center;gap:6px">
+        <button class="hbtn" onclick="refreshData()" title="Volver a cargar datos desde Google Sheets">🔄 Actualizar</button>
+        <button class="hbtn" onclick="openPwModal()" title="Cambiar contraseñas de usuarios">🔑 Contraseñas</button>
+        <button class="hbtn gold" onclick="downloadHTML()" title="Descargar HTML con cambios guardados">⬇️ Descargar</button>
+      </div>
       <div class="ubadge">
         <span id="huser">-</span>
         <span class="urole" id="hrole">-</span>
@@ -285,6 +334,29 @@ header{background:var(--p);padding:0 24px;height:58px;display:flex;align-items:c
   <div class="mc">
     <div id="TS"></div>
     <div id="TR" class="hidden"></div>
+  </div>
+</div>
+
+<!-- ═══ MODAL CONTRASEÑAS (solo Admin) ═══ -->
+<div id="pwModal" class="movl hidden">
+  <div class="mo">
+    <div class="moh">
+      <span class="moht">🔑 Gestionar Contraseñas</span>
+      <button class="mox" onclick="closePwModal()">×</button>
+    </div>
+    <div class="mob">
+      <div class="pwnote">
+        ⚠️ Los cambios solo quedan guardados al <b>descargar el archivo HTML</b> y volver a subirlo a GitHub. Sin descarga, los cambios se pierden al cerrar sesión.
+      </div>
+      <table class="pwtab">
+        <thead><tr><th>Rol</th><th>Usuario</th><th>Nueva Contraseña</th></tr></thead>
+        <tbody id="pwTbody"></tbody>
+      </table>
+    </div>
+    <div class="mof">
+      <button class="mbtn sec" onclick="closePwModal()">Cancelar</button>
+      <button class="mbtn pri" onclick="savePwChanges()">✓ Guardar Cambios</button>
+    </div>
   </div>
 </div>
 
@@ -354,6 +426,8 @@ function doLogin(){
   document.getElementById('huser').textContent=f.u;
   document.getElementById('hrole').textContent=
     f.rol==='Admin'?'Administrador':f.rol==='Coord'?'Coordinador':'Vendedor';
+  // Mostrar herramientas de admin solo si es Admin
+  document.getElementById('adminTools').style.display=f.rol==='Admin'?'flex':'none';
   nav = f.rol==='Vend' ? {lv:'clientes',g:f.g,v:f.u,c:null}
       : f.rol==='Coord'? {lv:'vendedores',g:f.g,v:null,c:null}
       : {lv:'grupos',g:null,v:null,c:null};
@@ -365,6 +439,7 @@ function doLogin(){
 function doLogout(){
   me=null;D=null;
   nav={lv:'grupos',g:null,v:null,c:null};
+  document.getElementById('adminTools').style.display='none';
   document.getElementById('DB').classList.add('hidden');
   document.getElementById('LS').style.display='flex';
   document.getElementById('lu').value='';
@@ -880,6 +955,97 @@ function rankGrupo(gk){
       <tbody>${rows}</tbody>
     </table></div>
   </div>`;
+}/* ─── ADMIN: REFRESH DATA ─── */
+function refreshData(){
+  if(!me||me.rol!=='Admin')return;
+  D=null;
+  showToast('🔄 Actualizando datos desde Google Sheets…');
+  loadData();
+}
+
+/* ─── ADMIN: PASSWORD MODAL ─── */
+function openPwModal(){
+  const tbody=document.getElementById('pwTbody');
+  tbody.innerHTML=USERS.map((u,i)=>{
+    const rb=u.rol==='Admin'?'admin':u.rol==='Coord'?'coord':'vend';
+    const rolLabel=u.rol==='Admin'?'Admin':u.rol==='Coord'?'Coord':'Vendedor';
+    const grupo=u.g?`<span style="font-size:10px;color:var(--muted);margin-left:5px">${u.g}</span>`:'';
+    return `<tr>
+      <td><span class="rolbadge ${rb}">${rolLabel}</span></td>
+      <td><b>${u.u}</b>${grupo}</td>
+      <td><input class="pwinp" data-idx="${i}" value="${u.p}" placeholder="Nueva contraseña" spellcheck="false"></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('pwModal').classList.remove('hidden');
+}
+
+function closePwModal(){
+  document.getElementById('pwModal').classList.add('hidden');
+}
+
+function savePwChanges(){
+  const inputs=document.querySelectorAll('#pwTbody .pwinp');
+  let changed=0;
+  inputs.forEach(inp=>{
+    const idx=parseInt(inp.dataset.idx);
+    const nv=inp.value.trim();
+    if(nv&&nv!==USERS[idx].p){USERS[idx].p=nv;changed++;}
+  });
+  closePwModal();
+  if(changed>0)
+    showToast(`✅ ${changed} contraseña(s) actualizada(s) — descarga el HTML para guardarlas`);
+  else
+    showToast('Sin cambios');
+}
+
+/* ─── ADMIN: DOWNLOAD HTML WITH UPDATED USERS ─── */
+function serializeUsers(){
+  const lines=USERS.map(u=>
+    `  {rol:'${u.rol}',u:'${u.u}',p:'${u.p}',g:${u.g?`'${u.g}'`:'null'}}`
+  );
+  return `const USERS=[\n${lines.join(',\n')}\n];`;
+}
+
+function downloadHTML(){
+  showToast('⏳ Generando archivo…');
+  fetch(window.location.href,{cache:'no-store'})
+    .then(r=>r.text())
+    .then(html=>{
+      // Locate "const USERS=[" and find its matching "];"
+      const marker='const USERS=[';
+      const start=html.indexOf(marker);
+      if(start===-1)throw new Error('Marcador USERS no encontrado');
+      let i=start+marker.length, depth=1;
+      while(i<html.length&&depth>0){
+        if(html[i]==='[')depth++;
+        else if(html[i]===']')depth--;
+        i++;
+      }
+      if(i<html.length&&html[i]===';')i++; // skip ";"
+      const newHTML=html.slice(0,start)+serializeUsers()+html.slice(i);
+      const blob=new Blob([newHTML],{type:'text/html;charset=utf-8'});
+      const a=document.createElement('a');
+      a.href=URL.createObjectURL(blob);
+      a.download='dashboard.html';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
+      showToast('✅ dashboard.html descargado correctamente');
+    })
+    .catch(e=>showToast('❌ Error al descargar: '+e.message));
+}
+
+/* ─── TOAST ─── */
+function showToast(msg){
+  // Remove any existing toast
+  document.querySelectorAll('.toast').forEach(t=>t.remove());
+  const t=document.createElement('div');
+  t.className='toast';
+  t.textContent=msg;
+  document.body.appendChild(t);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>t.classList.add('show')));
+  setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),350);},3500);
 }
 </script>
 </body>

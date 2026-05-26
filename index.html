@@ -277,11 +277,34 @@ header{background:var(--p);padding:0 24px;height:58px;display:flex;align-items:c
   box-shadow:0 4px 20px rgba(0,0,0,.25)}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
+/* ═══════════════ AVANCE POR MARCA ═══════════════ */
+.bmgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:20px}
+.bmc{background:#fff;border-radius:var(--rs);padding:12px 14px;border:1px solid var(--bdr);box-shadow:var(--sh)}
+.bmh{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.bmem{font-size:16px;flex-shrink:0}
+.bmn{font-size:13px;font-weight:700;color:var(--txt)}
+.bmbw{height:4px;background:var(--bg);border-radius:2px;overflow:hidden;margin-bottom:8px}
+.bmbf{height:100%;border-radius:2px}
+.bmbf.g{background:var(--ok)}.bmbf.o{background:var(--warn)}.bmbf.r{background:var(--bad)}.bmbf.x{background:#d1d5db}
+.bms{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);flex-wrap:wrap}
+.bms b{color:var(--txt)}
+.bmpct{font-weight:800;font-size:13px}
+.bmpct.g{color:var(--ok)}.bmpct.o{color:var(--warn)}.bmpct.r{color:var(--bad)}.bmpct.x{color:#9ca3af}
+
+/* ═══════════════ SEARCH BAR ═══════════════ */
+.srchwrap{display:flex;align-items:center;gap:8px;background:#fff;border:1.5px solid var(--bdr);
+  border-radius:var(--rs);padding:9px 14px;margin-bottom:12px;transition:border .2s}
+.srchwrap:focus-within{border-color:var(--p);box-shadow:0 0 0 3px rgba(8,43,115,.08)}
+.srchico{font-size:14px;flex-shrink:0;color:var(--muted)}
+.srchinp{border:none;outline:none;font-size:14px;font-family:'Inter',sans-serif;color:var(--txt);flex:1;background:transparent}
+.srchinp::placeholder{color:var(--muted)}
+
 /* ═══════════════ RESPONSIVE ═══════════════ */
-@media(max-width:900px){.kgrid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:900px){.kgrid{grid-template-columns:repeat(2,1fr)}.bmgrid{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:640px){
   .mc{padding:14px}
   .gg,.kgrid{grid-template-columns:1fr}
+  .bmgrid{grid-template-columns:repeat(2,1fr)}
   .vg{grid-template-columns:1fr}
   .htitle{font-size:14px}.hsub{display:none}
   .lc{width:92%;padding:32px 24px}
@@ -412,11 +435,15 @@ const BR=[
 
 const GRUPOS=['A_TAT','P_MZL','P_PER'];
 
-// CSV export URL (replace pubhtml with pub?output=csv)
+// Emojis por marca para la sección "Avance por Marca"
+const BEMOJI={'Gourmet':'🍪','Cocada':'❤️','Pomgur':'☀️','Cosmic':'⭐','Yomax':'🌟','Arequipe':'🍊'};
+
+// Hoja 1: ventas por cliente | Hoja 2: ventas por vendedor
 const CSV_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vTqeB0eAVzGy2YBBPIi0oRu_EqH7pHpL2qqFPhEgfQmlX1mD2ZQTSj7obaT-RG_VgiUANuPe_oEsIPS/pub?gid=0&single=true&output=csv';
+const CSV_URL2='https://docs.google.com/spreadsheets/d/e/2PACX-1vTqeB0eAVzGy2YBBPIi0oRu_EqH7pHpL2qqFPhEgfQmlX1mD2ZQTSj7obaT-RG_VgiUANuPe_oEsIPS/pub?gid=405875762&single=true&output=csv';
 
 /* ─── STATE ─── */
-let me=null, D=null, atab='s';
+let me=null, D=null, D2=null, atab='s';
 let nav={lv:'grupos',g:null,v:null,c:null};
 
 /* ─── AUTH ─── */
@@ -520,15 +547,37 @@ function cval(c){return c==='g'?'var(--ok)':c==='o'?'var(--warn)':c==='r'?'var(-
 async function loadData(){
   showLoad('TS'); showLoad('TR');
   try{
-    const res=await fetch(CSV_URL);
-    const txt=await res.text();
-    D=processRows(parseCSV(txt));
+    const [r1,r2]=await Promise.all([
+      fetch(CSV_URL).then(r=>r.text()),
+      fetch(CSV_URL2).then(r=>r.text()).catch(()=>null)
+    ]);
+    D=processRows(parseCSV(r1));
+    if(r2){try{D2=processVendSheet(parseCSV(r2));}catch(e){D2=null;}}
   }catch(e){
     showErr('TS','No se pudo cargar la información. Verifique su conexión.');
     showErr('TR','No se pudo cargar la información.');
     console.error(e);return;
   }
   renderAll();
+}
+
+/* Procesa hoja 2 (vendedores): construye lookup grupo→vendedor→marcas */
+function processVendSheet(rows){
+  const data={};
+  for(const r of rows){
+    const g=r['Grupo de venta']?.trim();
+    const v=r['Vendedor']?.trim();
+    if(!g||!v)continue;
+    if(!data[g])data[g]={};
+    if(!data[g][v])data[g][v]=initM();
+    for(const b of BR){
+      data[g][v][b.k].meta+=parseInt(r[b.mc])||0;
+      data[g][v][b.k].venta+=parseInt(r[b.vc])||0;
+    }
+  }
+  for(const gd of Object.values(data))
+    for(const vm of Object.values(gd))calcPct(vm);
+  return data;
 }
 function showLoad(id){document.getElementById(id).innerHTML=
   `<div class="lds"><div class="spin"></div><p>Cargando datos de campaña…</p></div>`;}
@@ -862,38 +911,125 @@ function renderVendedores(gk){
 /* Nivel 2: Clientes */
 function renderClientes(gk,vk){
   const vd=D[gk]?.vs[vk]; if(!vd)return'<p>Sin datos</p>';
-  const cs=Object.entries(vd.cs);
-  const rows=cs.map(([cod,cd])=>{
-    const tp=totPct(cd.m);
-    const cl=cls(tp);
-    const mo=mOk(cd.m); const mc=mCon(cd.m);
-    const nm=cd.nm?cd.nm.replace(/^\d+ - /,''):cod;
-    const dots=BR.map(b=>{
-      const dc=cd.m[b.k].meta===0?'x':cls(cd.m[b.k].pct);
-      return `<div class="dot ${dc}" title="${b.s}: ${cd.m[b.k].pct!==null?cd.m[b.k].pct+'%':'sin meta'}"></div>`;
-    }).join('');
-    // escape single quotes in cod for onclick
-    const safeC=cod.replace(/'/g,"\\'");
+  const av=calcAvanceMes();
+  const info=GINFO[gk]||{zona:gk,tipo:'AV'};
+  const avPct=info.tipo==='AV'?av.a.pct:av.p.pct;
+  const avEl=info.tipo==='AV'?av.a.el:av.p.el;
+  const avTot=info.tipo==='AV'?av.a.tot:av.p.tot;
+  const avLabel=info.tipo==='AV'?'Lun–Vie':'Lun–Sab';
+
+  // Datos de marca: hoja 2 si disponible, sino hoja 1
+  const brandM=D2?.[gk]?.[vk]||vd.m;
+  const {meta,venta,pct}=gTotals({m:brandM});
+
+  // ── 4 KPIs ──
+  const kpis=`
+    <div class="kgrid">
+      <div class="kc">
+        <div class="kn">${fmt(meta)}</div>
+        <div class="kl">Meta de Unidades</div>
+        <div class="ks">Total de la ruta</div>
+      </div>
+      <div class="kc">
+        <div class="kn">${fmt(venta)}</div>
+        <div class="kl">Venta Real</div>
+        <div class="ks">Unidades acumuladas</div>
+      </div>
+      <div class="kc">
+        <div class="kn" style="color:${cval(cls(pct))}">${pct}%</div>
+        <div class="kl">Cumplimiento</div>
+        <div class="ks">${fmt(venta)} de ${fmt(meta)} und.</div>
+      </div>
+      <div class="kc">
+        <div class="kn">${avPct}%</div>
+        <div class="kl">Avance del Mes</div>
+        <div class="ks">Día ${avEl}/${avTot} · ${avLabel}</div>
+      </div>
+    </div>`;
+
+  // ── Avance por Marca ──
+  const marcaSec=`
+    <div class="vsec">
+      <span style="font-size:16px">🔶</span>
+      <span class="vsecl">Avance por Marca</span>
+    </div>
+    <div class="bmgrid">
+      ${BR.map(b=>{
+        const bm=brandM[b.k];
+        const p=bm.pct??0;
+        const cl2=bm.meta>0?cls(p):'x';
+        return `<div class="bmc">
+          <div class="bmh">
+            <span class="bmem">${BEMOJI[b.k]||'📦'}</span>
+            <span class="bmn">${b.k}</span>
+          </div>
+          <div class="bmbw"><div class="bmbf ${cl2}" style="width:${Math.min(p,100)}%"></div></div>
+          <div class="bms">
+            <span>Venta: <b>${fmt(bm.venta)}</b></span>
+            <span>Meta: <b>${fmt(bm.meta)}</b></span>
+            <span class="bmpct ${cl2}">${bm.meta>0?p+'%':'N/A'}</span>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+
+  // ── Tabla de clientes ordenada por % cumplimiento DESC ──
+  const cs=Object.entries(vd.cs).map(([cod,cd])=>{
+    const t=gTotals(cd);
+    return{cod,cd,meta:t.meta,venta:t.venta,pct:t.pct};
+  });
+  cs.sort((a,b)=>b.pct-a.pct);
+
+  const meds=['🥇','🥈','🥉'];
+  const rows=cs.map((c,i)=>{
+    const pcl=c.meta>0?cls(c.pct):'x';
+    const nm=c.cd.nm?c.cd.nm.replace(/^\d+ - /,''):c.cod;
+    const safeC=c.cod.replace(/'/g,"\\'");
+    const pos=i<3
+      ?`<span style="font-size:20px;line-height:1">${meds[i]}</span>`
+      :`<b style="color:var(--muted);font-size:13px">${i+1}</b>`;
     return `<tr class="cl" onclick="navTo('clienteDetail','${gk}','${vk}','${safeC}')">
-      <td><span style="font-weight:700;color:var(--muted);font-size:11px">${cod}</span></td>
-      <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${nm}</td>
-      <td><div class="md">${dots}</div></td>
-      <td><span class="pp ${cl}">${tp}%</span></td>
-      <td style="font-size:11px;color:var(--muted);white-space:nowrap">${mo}/${mc}</td>
+      <td style="text-align:center;width:44px">${pos}</td>
+      <td>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:1px">${c.cod}</div>
+        <div style="font-weight:700;font-size:13px">${nm}</div>
+      </td>
+      <td style="text-align:right;font-weight:600;font-size:13px">${fmt(c.venta)}</td>
+      <td style="text-align:right;color:var(--muted);font-size:13px">${fmt(c.meta)}</td>
+      <td style="text-align:center"><span class="pp ${pcl}">${c.meta>0?c.pct+'%':'—'}</span></td>
     </tr>`;
   }).join('');
-  return `<div>
-    <div class="sh">
-      <span class="st">📋 Clientes · ${vk}</span>
-      <span class="sc">${cs.length} clientes</span>
+
+  const nc=cs.length;
+  const enMeta=cs.filter(c=>c.meta>0&&c.pct>=100).length;
+
+  return `${kpis}${marcaSec}
+    <div class="vsec" style="margin-top:4px">
+      <span style="font-size:16px">👥</span>
+      <span class="vsecl">Clientes · ${vk}</span>
+      <span class="vsecsub">${nc} clientes · ${enMeta} en meta</span>
     </div>
-    <div class="ctw"><table class="ct">
+    <div class="srchwrap">
+      <span class="srchico">🔍</span>
+      <input id="csrch" class="srchinp" placeholder="Buscar cliente..." oninput="filterClientes()">
+    </div>
+    <div class="ctw"><table class="ct" id="clientTable">
       <thead><tr>
-        <th>Código</th><th>Nombre</th><th>Marcas</th><th>% Total</th><th>Marcas ✓</th>
+        <th style="text-align:center;width:44px">#</th>
+        <th>Cliente</th>
+        <th style="text-align:right">Venta</th>
+        <th style="text-align:right">Meta</th>
+        <th style="text-align:center">Cumplimiento</th>
       </tr></thead>
       <tbody>${rows}</tbody>
-    </table></div>
-  </div>`;
+    </table></div>`;
+}
+
+function filterClientes(){
+  const q=(document.getElementById('csrch')?.value||'').toLowerCase();
+  document.querySelectorAll('#clientTable tbody tr').forEach(r=>{
+    r.style.display=r.textContent.toLowerCase().includes(q)?'':'none';
+  });
 }
 
 /* Nivel 3: Detalle cliente */

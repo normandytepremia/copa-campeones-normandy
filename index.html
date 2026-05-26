@@ -108,22 +108,52 @@ header{background:var(--p);padding:0 24px;height:58px;display:flex;align-items:c
 .brpct{font-size:11px;font-weight:700;width:36px;text-align:right}
 .brpct.g{color:var(--ok)}.brpct.o{color:var(--warn)}.brpct.r{color:var(--bad)}.brpct.x{color:#9ca3af}
 
-/* ═══════════════ GRUPO CARDS ═══════════════ */
-.gg{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:20px}
-.gc{background:#fff;border-radius:var(--r);padding:24px;box-shadow:var(--sh);cursor:pointer;
-  transition:transform .2s,box-shadow .2s;border:1px solid var(--bdr);position:relative;overflow:hidden}
-.gc::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:var(--p)}
-.gc:hover{transform:translateY(-3px);box-shadow:var(--sh2)}
-.gch{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px}
-.gcn{font-family:'Oswald',sans-serif;font-size:26px;font-weight:700;color:var(--p)}
-.cpct{text-align:right}
-.cpct-n{font-family:'Oswald',sans-serif;font-size:30px;font-weight:700}
-.cpct-l{font-size:10px;color:var(--muted)}
-.gcst{display:flex;gap:20px;margin-bottom:18px}
-.gcs{display:flex;flex-direction:column;gap:2px}
-.gcsv{font-size:20px;font-weight:700}
-.gcsl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px}
-.gcbr{display:flex;flex-direction:column;gap:7px}
+/* ═══════════════ MOTIVATIONAL BANNER ═══════════════ */
+.motb{background:linear-gradient(100deg,var(--p) 0%,var(--p2) 60%,var(--p3) 100%);
+  border-radius:var(--r);padding:14px 20px;margin-bottom:18px;display:flex;align-items:center;gap:14px}
+.motstar{font-size:26px;flex-shrink:0}
+.motq{font-size:13px;font-style:italic;color:rgba(255,255,255,.93);font-weight:500;line-height:1.5}
+.mots{font-size:10px;color:rgba(255,255,255,.48);letter-spacing:.6px;text-transform:uppercase;margin-top:3px}
+
+/* ═══════════════ KPI GRID ═══════════════ */
+.kgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.kc{background:#fff;border-radius:var(--r);padding:15px 18px;box-shadow:var(--sh);border:1px solid var(--bdr)}
+.kn{font-family:'Oswald',sans-serif;font-size:26px;font-weight:700;line-height:1.1;color:var(--txt)}
+.kl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-top:5px;font-weight:700}
+.ks{font-size:11px;color:var(--muted);margin-top:3px}
+
+/* ═══════════════ GRUPOS SECTION HEADER ═══════════════ */
+.gsec{display:flex;align-items:center;gap:8px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--bdr)}
+.gsecl{font-family:'Oswald',sans-serif;font-size:13px;font-weight:700;color:var(--p);text-transform:uppercase;letter-spacing:.5px}
+
+/* ═══════════════ GRUPO CARDS v2 ═══════════════ */
+.gg{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:18px}
+.gc2{background:#fff;border-radius:var(--r);border:1px solid var(--bdr);box-shadow:var(--sh);
+  overflow:hidden;cursor:pointer;transition:transform .2s,box-shadow .2s}
+.gc2:hover{transform:translateY(-3px);box-shadow:var(--sh2)}
+.gc2top{padding:18px 20px 14px}
+.gc2hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}
+.gc2hl{display:flex;align-items:center;gap:8px}
+.gc2nm{font-family:'Oswald',sans-serif;font-size:24px;font-weight:700;color:var(--p)}
+.gc2tipo{font-size:10px;font-weight:800;background:rgba(8,43,115,.1);color:var(--p);
+  padding:2px 7px;border-radius:4px;letter-spacing:.3px}
+.gc2pil{font-size:14px;font-weight:800;padding:4px 12px;border-radius:20px}
+.gc2pil.r{background:var(--bad-bg);color:var(--bad)}
+.gc2pil.o{background:var(--warn-bg);color:var(--warn)}
+.gc2pil.g{background:var(--ok-bg);color:var(--ok)}
+.gc2sub{font-size:11px;color:var(--muted);margin-bottom:16px}
+.gc2stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.gc2stat{background:var(--bg);border-radius:var(--rs);padding:11px 14px;border:1px solid var(--bdr)}
+.gc2sv{font-family:'Oswald',sans-serif;font-size:21px;font-weight:700;color:var(--txt)}
+.gc2sl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;margin-top:3px;font-weight:600}
+.gc2prog{margin-bottom:10px}
+.gc2prow{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:5px}
+.gc2bw{height:9px;background:var(--bg);border-radius:5px;overflow:hidden;border:1px solid var(--bdr)}
+.gc2bf{height:100%;border-radius:5px;transition:width .5s ease}
+.gc2info{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);flex-wrap:wrap;gap:4px}
+.gc2ft{padding:11px 20px;border-top:1px solid var(--bdr);display:flex;align-items:center;
+  justify-content:space-between;font-size:12px;font-weight:700;color:var(--p);background:rgba(8,43,115,.02)}
+.gc2ft:hover{background:rgba(8,43,115,.05)}
 
 /* ═══════════════ VENDEDOR CARDS ═══════════════ */
 .vg{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:16px}
@@ -198,9 +228,10 @@ header{background:var(--p);padding:0 24px;height:58px;display:flex;align-items:c
 .pc.r{background:var(--bad-bg);color:var(--bad)}.pc.x{background:#f3f4f6;color:#9ca3af}
 
 /* ═══════════════ RESPONSIVE ═══════════════ */
+@media(max-width:900px){.kgrid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:640px){
   .mc{padding:14px}
-  .gg{grid-template-columns:1fr}
+  .gg,.kgrid{grid-template-columns:1fr}
   .vg{grid-template-columns:1fr}
   .htitle{font-size:14px}.hsub{display:none}
   .lc{width:92%;padding:32px 24px}
@@ -506,33 +537,171 @@ function renderSeg(){
   c.innerHTML=html;
 }
 
-/* Nivel 0: Grupos */
-function renderGrupos(){
-  const gs=me.rol==='Admin'?GRUPOS:[me.g];
-  return `<div class="gg">${gs.map(g=>renderGCard(g)).join('')}</div>`;
+/* ─── GRUPO METADATA ─── */
+const GINFO={
+  'A_TAT':{zona:'Zona TAT',  tipo:'AV'},
+  'P_PER':{zona:'Pereira',   tipo:'PV'},
+  'P_MZL':{zona:'Manizales', tipo:'PV'},
+};
+
+/* ─── NUMBER FORMATTER (Colombian: 1.812) ─── */
+function fmt(n){return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.');}
+
+/* ─── AVANCE DEL MES ─── */
+/* A_TAT = autoventa → días hábiles Lun-Vie (sin importar festivos)
+   P_PER / P_MZL = preventa → días hábiles Lun-Sab (sin importar festivos) */
+function calcAvanceMes(){
+  const now=new Date(),y=now.getFullYear(),mo=now.getMonth(),td=now.getDate();
+  const last=new Date(y,mo+1,0).getDate();
+  function cnt(to,sat){
+    let c=0;
+    for(let d=1;d<=to;d++){
+      const dw=new Date(y,mo,d).getDay();
+      if(sat?dw>=1&&dw<=6:dw>=1&&dw<=5)c++;
+    }
+    return c;
+  }
+  const aTot=cnt(last,false),aEl=cnt(td,false);
+  const pTot=cnt(last,true), pEl=cnt(td,true);
+  return{
+    a:{el:aEl,tot:aTot,pct:aTot?Math.round(aEl/aTot*100):0},
+    p:{el:pEl,tot:pTot,pct:pTot?Math.round(pEl/pTot*100):0}
+  };
 }
 
-function renderGCard(gk){
-  const gd=D[gk]; if(!gd)return'';
-  const nvs=Object.keys(gd.vs).length;
-  const ncs=Object.values(gd.vs).reduce((s,v)=>s+Object.keys(v.cs).length,0);
-  const tp=totPct(gd.m);
-  const cl=cls(tp);
-  return `<div class="gc" onclick="navTo('vendedores','${gk}')">
-    <div class="gch">
-      <div class="gcn">${gk}</div>
-      <div class="cpct">
-        <div class="cpct-n" style="color:${cval(cl)}">${tp}%</div>
-        <div class="cpct-l">cumplimiento</div>
+/* ─── GLOBAL KPIs ─── */
+function getKPIs(){
+  let cl=0,meta=0,venta=0;
+  for(const g of GRUPOS){
+    const gd=D[g];if(!gd)continue;
+    for(const vd of Object.values(gd.vs))cl+=Object.keys(vd.cs).length;
+    for(const b of BR){meta+=gd.m[b.k].meta;venta+=gd.m[b.k].venta;}
+  }
+  return{cl,meta,venta,pct:meta?Math.round(venta/meta*100):0};
+}
+
+/* ─── GRUPO TOTALS (unidades) ─── */
+function gTotals(gd){
+  let meta=0,venta=0;
+  for(const b of BR){meta+=gd.m[b.k].meta;venta+=gd.m[b.k].venta;}
+  return{meta,venta,pct:meta?Math.round(venta/meta*100):0};
+}
+
+/* ─── FRASE MOTIVADORA ─── */
+const QUOTES=[
+  '"Cada visita es una oportunidad. Cada cliente, una posibilidad de ganar."',
+  '"El campeón no es el que nunca cae, sino el que siempre se levanta y sigue vendiendo."',
+  '"La meta no se cumple sola — se construye cliente a cliente, visita a visita."',
+];
+
+/* Nivel 0: Grupos */
+function renderGrupos(){
+  const av=calcAvanceMes();
+  const kpi=getKPIs();
+  const cumplCls=cls(kpi.pct);
+  const quote=QUOTES[new Date().getDate()%QUOTES.length];
+
+  const banner=`
+    <div class="motb">
+      <span class="motstar">⭐</span>
+      <div>
+        <div class="motq">${quote}</div>
+        <div class="mots">Normandy Trade TR — Canal Tradicional</div>
       </div>
-    </div>
-    <div class="gcst">
-      <div class="gcs"><span class="gcsv">${nvs}</span><span class="gcsl">Vendedores</span></div>
-      <div class="gcs"><span class="gcsv">${ncs.toLocaleString()}</span><span class="gcsl">Clientes</span></div>
-      <div class="gcs"><span class="gcsv">${mOk(gd.m)}/${mCon(gd.m)}</span><span class="gcsl">Marcas ✓</span></div>
-    </div>
-    <div class="gcbr">${brandBars(gd.m)}</div>
-  </div>`;
+    </div>`;
+
+  const kpis=`
+    <div class="kgrid">
+      <div class="kc">
+        <div class="kn">${fmt(kpi.cl)}</div>
+        <div class="kl">Clientes Participantes</div>
+      </div>
+      <div class="kc">
+        <div class="kn" style="color:${cval(cumplCls)}">${kpi.pct}%</div>
+        <div class="kl">Cumplimiento Global</div>
+        <div class="ks">${fmt(kpi.venta)} de ${fmt(kpi.meta)} unidades</div>
+      </div>
+      <div class="kc">
+        <div class="kn" style="font-size:20px;letter-spacing:-.5px">
+          ${av.a.pct}%&nbsp;<span style="color:var(--bdr)">/</span>&nbsp;${av.p.pct}%
+        </div>
+        <div class="kl">Avance del Mes</div>
+        <div class="ks">A_ (día ${av.a.el}/${av.a.tot}) · P_ (día ${av.p.el}/${av.p.tot})</div>
+      </div>
+      <div class="kc">
+        <div class="kn">${fmt(kpi.venta)}</div>
+        <div class="kl">Unidades Vendidas</div>
+      </div>
+    </div>`;
+
+  const sec=`<div class="gsec"><span style="font-size:16px">🌐</span>
+    <span class="gsecl">Grupos de Venta</span></div>`;
+
+  const gs=me.rol==='Admin'?GRUPOS:[me.g];
+  const cards=`<div class="gg">${gs.map(g=>renderGCard(g,av)).join('')}</div>`;
+
+  return banner+kpis+sec+cards;
+}
+
+function renderGCard(gk,av){
+  const gd=D[gk];if(!gd)return'';
+  const info=GINFO[gk]||{zona:gk,tipo:'?'};
+  const nv=Object.keys(gd.vs).length;
+  const nc=Object.values(gd.vs).reduce((s,v)=>s+Object.keys(v.cs).length,0);
+  const {meta,venta,pct}=gTotals(gd);
+
+  // Pill color: compare vs avance del mes
+  const avPct=info.tipo==='AV'?av.a.pct:av.p.pct;
+  const cl2=pct>=avPct?'g':pct>=avPct*0.75?'o':'r';
+  const barColor=cl2==='g'?'var(--ok)':cl2==='o'?'var(--warn)':'var(--bad)';
+
+  // Ruta baja (lowest performing vendedor)
+  const vlist=Object.entries(gd.vs).map(([vk,vd])=>({vk,pct:totPct(vd.m)}));
+  vlist.sort((a,b)=>a.pct-b.pct);
+  const rutaBaja=vlist[0];
+  const faltantes=Math.max(0,meta-venta);
+
+  return `
+    <div class="gc2" onclick="navTo('vendedores','${gk}')">
+      <div class="gc2top">
+        <div class="gc2hdr">
+          <div class="gc2hl">
+            <span style="font-size:20px">🌐</span>
+            <span class="gc2nm">${gk}</span>
+            <span class="gc2tipo">${info.tipo}</span>
+          </div>
+          <span class="gc2pil ${cl2}">${pct}%</span>
+        </div>
+        <div class="gc2sub">${info.zona} · ${nv} rutas · ${fmt(nc)} clientes</div>
+        <div class="gc2stats">
+          <div class="gc2stat">
+            <div class="gc2sv">${fmt(meta)}</div>
+            <div class="gc2sl">Meta Mensual</div>
+          </div>
+          <div class="gc2stat">
+            <div class="gc2sv">${fmt(venta)}</div>
+            <div class="gc2sl">Venta Acum.</div>
+          </div>
+        </div>
+        <div class="gc2prog">
+          <div class="gc2prow">
+            <span>Avance del mes: <b>${avPct}%</b></span>
+            <span style="font-weight:700;color:${barColor}">${pct}%</span>
+          </div>
+          <div class="gc2bw">
+            <div class="gc2bf" style="width:${Math.min(pct,100)}%;background:${barColor}"></div>
+          </div>
+        </div>
+        <div class="gc2info">
+          <span>${fmt(faltantes)} unid. faltantes</span>
+          ${rutaBaja?`<span>Ruta baja: <b>${rutaBaja.vk}</b> (${rutaBaja.pct}%)</span>`:''}
+        </div>
+      </div>
+      <div class="gc2ft">
+        <span>Ver ${nv} rutas del grupo</span>
+        <span style="font-size:16px">›</span>
+      </div>
+    </div>`;
 }
 
 /* Nivel 1: Vendedores */

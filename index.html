@@ -299,6 +299,47 @@ header{background:var(--p);padding:0 24px;height:58px;display:flex;align-items:c
 .srchinp{border:none;outline:none;font-size:14px;font-family:'Inter',sans-serif;color:var(--txt);flex:1;background:transparent}
 .srchinp::placeholder{color:var(--muted)}
 
+/* ═══════════════ SEMANA TABS ═══════════════ */
+.semtabs{display:flex;align-items:center;gap:8px;padding-bottom:16px;flex-wrap:wrap}
+.stab{padding:6px 18px;border-radius:20px;border:1.5px solid var(--bdr);background:#fff;
+  font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .2s;
+  font-family:'Inter',sans-serif}
+.stab:hover{border-color:var(--p);color:var(--p)}
+.stab.on{background:var(--p);color:#fff;border-color:var(--p)}
+.stab.tot{border-style:dashed}
+.stab.tot.on{background:var(--p2);border-style:solid}
+.stavance{font-size:12px;color:var(--muted);margin-left:4px;white-space:nowrap}
+
+/* ═══════════════ CLIENT DETAIL v2 ═══════════════ */
+.cdc2{background:#fff;border-radius:var(--r);padding:22px 26px;box-shadow:var(--sh);
+  border:1px solid var(--bdr);margin-bottom:20px}
+.cdc2h{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px}
+.cdc2t{font-family:'Oswald',sans-serif;font-size:22px;font-weight:700;color:var(--p)}
+.cdc2s{font-size:12px;color:var(--muted);margin-top:4px}
+.cdc2pct{text-align:right;flex-shrink:0;margin-left:16px}
+.cdc2pn{font-family:'Oswald',sans-serif;font-size:42px;font-weight:700;line-height:1}
+.cdc2pl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+/* Global progress bar */
+.gproglbl{font-size:12px;color:var(--muted);margin-bottom:5px}
+.gprogrel{position:relative;margin-bottom:4px}
+.gprogbar{height:14px;background:var(--bg);border-radius:7px;border:1px solid var(--bdr);overflow:hidden}
+.gprogfill{height:100%;border-radius:7px;transition:width .6s ease}
+.gprogmark{position:absolute;top:-3px;bottom:-3px;width:2px;border-radius:1px;
+  background:rgba(8,43,115,.7);transform:translateX(-50%);pointer-events:none}
+.gproginfo{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);
+  position:relative;margin-top:2px}
+.gprogavlbl{position:absolute;font-size:11px;font-weight:700;color:var(--p);
+  transform:translateX(-50%);white-space:nowrap;top:0}
+.gprogbottom{font-size:12px;color:var(--muted);margin-top:14px}
+/* Brand detail cards */
+.bmdg{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.bmdc{background:#fff;border-radius:var(--rs);padding:14px 16px;border:1px solid var(--bdr);box-shadow:var(--sh)}
+.bmdch{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.bmdbw{height:6px;background:var(--bg);border-radius:3px;overflow:hidden;margin-bottom:10px}
+.bmdbs{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--muted)}
+.bmdbs b{color:var(--txt)}
+.bmdpct{font-weight:800;font-size:16px}
+
 /* ═══════════════ RESPONSIVE ═══════════════ */
 @media(max-width:900px){.kgrid{grid-template-columns:repeat(2,1fr)}.bmgrid{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:640px){
@@ -445,6 +486,7 @@ const CSV_URL2='https://docs.google.com/spreadsheets/d/e/2PACX-1vTqeB0eAVzGy2YBB
 /* ─── STATE ─── */
 let me=null, D=null, D2=null, atab='s';
 let nav={lv:'grupos',g:null,v:null,c:null};
+let detailSem='all'; // 'Sem 1'..'Sem 4' o 'all' (Total)
 
 /* ─── AUTH ─── */
 function doLogin(){
@@ -600,9 +642,11 @@ function renderAll(){
 
 /* ─── NAVIGATION ─── */
 function navTo(lv,g,v,c){
+  if(lv!=='clienteDetail') detailSem='all';
   nav={lv,g:g||null,v:v||null,c:c||null};
   renderSeg();
 }
+function setDetailSem(sem){ detailSem=sem; renderSeg(); }
 
 /* ─── BREADCRUMB ─── */
 function breadcrumb(){
@@ -659,12 +703,30 @@ function brandBars(m){
 /* ─── SEGUIMIENTO ─── */
 function renderSeg(){
   const c=document.getElementById('TS');
-  let html=breadcrumb();
-  if(nav.lv==='grupos')         html+=renderGrupos();
-  else if(nav.lv==='vendedores') html+=renderVendedores(nav.g);
-  else if(nav.lv==='clientes')   html+=renderClientes(nav.g,nav.v);
-  else if(nav.lv==='clienteDetail') html+=renderClienteDetail(nav.g,nav.v,nav.c);
+  let html='';
+  if(nav.lv==='clienteDetail') html+=renderSemTabs();
+  html+=breadcrumb();
+  if(nav.lv==='grupos')            html+=renderGrupos();
+  else if(nav.lv==='vendedores')   html+=renderVendedores(nav.g);
+  else if(nav.lv==='clientes')     html+=renderClientes(nav.g,nav.v);
+  else if(nav.lv==='clienteDetail')html+=renderClienteDetail(nav.g,nav.v,nav.c);
   c.innerHTML=html;
+}
+
+function renderSemTabs(){
+  const av=calcAvanceMes();
+  const info=nav.g?GINFO[nav.g]||{tipo:'AV'}:{tipo:'AV'};
+  const avPct=info.tipo==='AV'?av.a.pct:av.p.pct;
+  const avEl=info.tipo==='AV'?av.a.el:av.p.el;
+  const avTot=info.tipo==='AV'?av.a.tot:av.p.tot;
+  const tabs=['Sem 1','Sem 2','Sem 3','Sem 4'].map(s=>
+    `<button class="stab${detailSem===s?' on':''}" onclick="setDetailSem('${s}')">${s}</button>`
+  ).join('');
+  return `<div class="semtabs">
+    ${tabs}
+    <button class="stab tot${detailSem==='all'?' on':''}" onclick="setDetailSem('all')">📊 Total</button>
+    <span class="stavance">Avance: ${avPct}% (${avEl}/${avTot} días)</span>
+  </div>`;
 }
 
 /* ─── GRUPO METADATA ─── */
@@ -1032,53 +1094,109 @@ function filterClientes(){
   });
 }
 
+/* ─── COMPUTE CLIENT DATA PER SEMANA ─── */
+/* Muestra acumulado hasta la semana seleccionada.
+   - Sobrecumplimiento se lleva automáticamente al acumular.
+   - Marcas sin meta pero con venta cuentan al total (se muestran como BONO).
+   - totalMeta = suma de marcas con meta>0; totalVenta = TODAS las ventas */
+function computeClientData(cData, sem){
+  if(sem==='all'){
+    let tm=0,tv=0;
+    BR.forEach(b=>{if(cData.m[b.k].meta>0)tm+=cData.m[b.k].meta; tv+=cData.m[b.k].venta;});
+    return{m:cData.m,totalMeta:tm,totalVenta:tv,totalPct:tm>0?Math.round(tv/tm*100):0};
+  }
+  const idx=parseInt(sem.split(' ')[1]);
+  const sNames=['Sem 1','Sem 2','Sem 3','Sem 4'];
+  const m=initM();
+  for(let i=0;i<idx;i++){
+    const sd=cData.sems[sNames[i]]; if(!sd)continue;
+    BR.forEach(b=>{m[b.k].meta+=sd[b.k].meta; m[b.k].venta+=sd[b.k].venta;});
+  }
+  calcPct(m);
+  let tm=0,tv=0;
+  BR.forEach(b=>{if(m[b.k].meta>0)tm+=m[b.k].meta; tv+=m[b.k].venta;});
+  return{m,totalMeta:tm,totalVenta:tv,totalPct:tm>0?Math.round(tv/tm*100):0};
+}
+
 /* Nivel 3: Detalle cliente */
 function renderClienteDetail(gk,vk,c){
-  const cd=D[gk]?.vs[vk]?.cs[c]; if(!cd)return'<p>Sin datos</p>';
-  const nm=cd.nm?cd.nm.replace(/^\d+ - /,''):c;
-  const tp=totPct(cd.m);
-  const cl=cls(tp);
-  const mo=mOk(cd.m); const mc=mCon(cd.m);
+  const cData=D[gk]?.vs[vk]?.cs[c]; if(!cData)return'<p>Sin datos</p>';
+  const av=calcAvanceMes();
+  const info=GINFO[gk]||{tipo:'AV'};
+  const avPct=info.tipo==='AV'?av.a.pct:av.p.pct;
 
-  const bcards=BR.map(b=>{
-    const bm=cd.m[b.k];
-    if(bm.meta===0) return `
-      <div class="bdc" style="opacity:.5">
-        <div class="bdh"><span class="bdn">${b.k}</span><span style="font-size:11px;color:var(--muted)">sin meta</span></div>
-        <div class="bdbw"><div class="brfill x" style="width:0"></div></div>
-        <div class="bdns"><span>Meta: 0</span><span>Venta: ${bm.venta}</span><span>—</span></div>
-      </div>`;
-    const p=bm.pct??0; const bc=cls(p);
-    return `<div class="bdc">
-      <div class="bdh">
-        <span class="bdn">${b.k}</span>
-        <span class="bdp" style="color:${cval(bc)}">${p}%</span>
+  const{m,totalMeta,totalVenta,totalPct}=computeClientData(cData,detailSem);
+  const nm=cData.nm?cData.nm.replace(/^\d+ - /,''):c;
+
+  // Color de cumplimiento
+  const pColor=totalPct>=100?'#6d28d9':totalPct>=avPct?'var(--gold)':'var(--bad)';
+  const markLeft=Math.min(avPct,99); // position del marcador avance
+
+  // ── Tarjeta principal ──
+  const header=`
+    <div class="cdc2">
+      <div class="cdc2h">
+        <div>
+          <div class="cdc2t">${c} – ${nm}</div>
+          <div class="cdc2s">Grupo: <b>${gk}</b> · Vendedor: <b>${vk}</b></div>
+        </div>
+        <div class="cdc2pct">
+          <div class="cdc2pn" style="color:${pColor}">${totalPct}%</div>
+          <div class="cdc2pl">Cumplimiento</div>
+        </div>
       </div>
-      <div class="bdbw"><div class="brfill ${bc}" style="width:${Math.min(p,100)}%"></div></div>
-      <div class="bdns">
-        <span>Meta: <b>${bm.meta}</b></span>
-        <span>Venta: <b>${bm.venta}</b></span>
-        <span style="color:${p>=100?'var(--ok)':'var(--bad)'}">
-          ${p>=100?'✓ Meta lograda':'Falta: '+(bm.meta-bm.venta)}
-        </span>
+      <div class="gproglbl">Cumplimiento global</div>
+      <div class="gprogrel">
+        <div class="gprogbar">
+          <div class="gprogfill" style="width:${Math.min(totalPct,100)}%;background:${pColor}"></div>
+        </div>
+        <div class="gprogmark" style="left:${markLeft}%"></div>
+      </div>
+      <div class="gproginfo">
+        <span>0%</span>
+        <span class="gprogavlbl" style="left:${markLeft}%">Avance esperado: ${avPct}%</span>
+        <span>100%</span>
+      </div>
+      <div class="gprogbottom">
+        ${fmt(totalVenta)} unidades vendidas de <b>${fmt(totalMeta)}</b> en meta
       </div>
     </div>`;
-  }).join('');
 
-  return `<div class="cdc">
-    <div class="cdh">
-      <div class="cdn">${nm}</div>
-      <div class="cdi">Código: ${c} · ${vk} · ${gk}</div>
-      <div class="cds">
-        <div>
-          <span class="cdsn" style="color:${cval(cl)}">${tp}%</span>
-          <span class="cdsl">cumplimiento total</span>
-        </div>
-        <span class="mbadge ${mo===mc&&mc>0?'ok':'bad'}">${mo}/${mc} marcas al 100%</span>
-      </div>
+  // ── Avance por Marca (solo marcas con meta>0 o venta>0) ──
+  const visibles=BR.filter(b=>m[b.k].meta>0||m[b.k].venta>0);
+  const marcaSec=visibles.length===0?'':`
+    <div class="vsec">
+      <span style="font-size:16px">🔶</span>
+      <span class="vsecl">Avance por Marca</span>
     </div>
-    <div class="bdg">${bcards}</div>
-  </div>`;
+    <div class="bmdg">
+      ${visibles.map(b=>{
+        const bm=m[b.k];
+        const noMeta=bm.meta===0; // vendió pero sin meta → bono
+        const p=bm.pct??0;
+        const bc=noMeta?'var(--muted)':p>=100?'#6d28d9':p>=avPct?'var(--gold)':'var(--bad)';
+        const w=noMeta?100:Math.min(p,100);
+        return `<div class="bmdc">
+          <div class="bmdch">
+            <span class="bmem">${BEMOJI[b.k]||'📦'}</span>
+            <span class="bmn" style="font-size:14px;font-weight:700">${b.k}</span>
+            ${noMeta?`<span style="font-size:10px;background:var(--warn-bg);color:var(--warn);
+              padding:1px 8px;border-radius:4px;font-weight:700;margin-left:auto">BONO</span>`:''}
+          </div>
+          <div class="bmdbw">
+            <div style="height:100%;border-radius:3px;background:${bc};width:${w}%;transition:width .6s"></div>
+          </div>
+          <div class="bmdbs">
+            <span>Venta: <b>${fmt(bm.venta)}</b>&nbsp;&nbsp;Meta: <b>${noMeta?'Sin meta':fmt(bm.meta)}</b></span>
+            <span class="bmdpct" style="color:${bc}">
+              ${noMeta?'+'+fmt(bm.venta)+' und.':p+'%'}
+            </span>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+
+  return header+marcaSec;
 }
 
 /* ─── RANKING ─── */

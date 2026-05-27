@@ -582,7 +582,12 @@ function totPct(m){
 }
 function mOk(m){return BR.filter(b=>m[b.k].pct!==null&&m[b.k].pct>=100).length;}
 function mCon(m){return BR.filter(b=>m[b.k].meta>0).length;}
-function cls(p){if(p===null)return'x';if(p>=100)return'g';if(p>=50)return'o';return'r';}
+/* Semáforo: verde si ≥ avance, amarillo si ≥ avance-3, rojo si < avance-3 */
+function cls(p,av){
+  if(p===null)return'x';
+  if(av!==undefined){if(p>=av)return'g';if(p>=av-3)return'o';return'r';}
+  if(p>=100)return'g';if(p>=50)return'o';return'r';
+}
 function cval(c){return c==='g'?'var(--ok)':c==='o'?'var(--warn)':c==='r'?'var(--bad)':'var(--muted)';}
 
 /* ─── DATA LOAD ─── */
@@ -790,7 +795,8 @@ const QUOTES=[
 function renderGrupos(){
   const av=calcAvanceMes();
   const kpi=getKPIs();
-  const cumplCls=cls(kpi.pct);
+  const avGlobal=Math.round((av.a.pct+av.p.pct)/2);
+  const cumplCls=cls(kpi.pct,avGlobal);
   const quote=QUOTES[new Date().getDate()%QUOTES.length];
 
   const banner=`
@@ -844,8 +850,8 @@ function renderGCard(gk,av){
 
   // Pill color: compare vs avance del mes
   const avPct=info.tipo==='AV'?av.a.pct:av.p.pct;
-  const cl2=pct>=avPct?'g':pct>=avPct*0.75?'o':'r';
-  const barColor=cl2==='g'?'var(--ok)':cl2==='o'?'var(--warn)':'var(--bad)';
+  const cl2=cls(pct,avPct);
+  const barColor=cval(cl2);
 
   // Ruta baja (lowest performing vendedor)
   const vlist=Object.entries(gd.vs).map(([vk,vd])=>({vk,pct:totPct(vd.m)}));
@@ -922,7 +928,7 @@ function renderVendedores(gk){
         <div class="ks">Unidades acumuladas</div>
       </div>
       <div class="kc">
-        <div class="kn" style="color:${cval(cls(pct))}">${pct}%</div>
+        <div class="kn" style="color:${cval(cls(pct,avPct))}">${pct}%</div>
         <div class="kl">Cumplimiento</div>
         <div class="ks">${fmt(venta)} de ${fmt(meta)} und.</div>
       </div>
@@ -949,10 +955,10 @@ function renderVendedores(gk){
     const enMeta=Object.values(vd.cs).filter(cd=>{
       const t=gTotals(cd); return t.meta>0&&t.pct>=100;
     }).length;
-    const ahead=vt.pct>=avPct;
-    const dotCol=ahead?'var(--ok)':'var(--bad)';
-    const pctCol=ahead?'var(--ok)':'var(--bad)';
-    const arrow=ahead?'↑':'↓';
+    const vcl=cls(vt.pct,avPct);
+    const dotCol=cval(vcl);
+    const pctCol=dotCol;
+    const arrow=vt.pct>=avPct?'↑':'↓';
     return `<div class="vc2" onclick="navTo('clientes','${gk}','${vk}')">
       <div class="vc2h">
         <span class="vc2n">${vk}</span>
@@ -998,7 +1004,7 @@ function renderClientes(gk,vk){
         <div class="ks">Unidades acumuladas</div>
       </div>
       <div class="kc">
-        <div class="kn" style="color:${cval(cls(pct))}">${pct}%</div>
+        <div class="kn" style="color:${cval(cls(pct,avPct))}">${pct}%</div>
         <div class="kl">Cumplimiento</div>
         <div class="ks">${fmt(venta)} de ${fmt(meta)} und.</div>
       </div>
@@ -1019,7 +1025,7 @@ function renderClientes(gk,vk){
       ${BR.map(b=>{
         const bm=brandM[b.k];
         const p=bm.pct??0;
-        const cl2=bm.meta>0?cls(p):'x';
+        const cl2=bm.meta>0?cls(p,avPct):'x';
         return `<div class="bmc">
           <div class="bmh">
             <span class="bmem">${BEMOJI[b.k]||'📦'}</span>
@@ -1044,7 +1050,7 @@ function renderClientes(gk,vk){
 
   const meds=['🥇','🥈','🥉'];
   const rows=cs.map((c,i)=>{
-    const pcl=c.meta>0?cls(c.pct):'x';
+    const pcl=c.meta>0?cls(c.pct,avPct):'x';
     const nm=c.cd.nm?c.cd.nm.replace(/^\d+ - /,''):c.cod;
     const safeC=c.cod.replace(/'/g,"\\'");
     const pos=i<3
@@ -1129,7 +1135,7 @@ function renderClienteDetail(gk,vk,c){
   const nm=cData.nm?cData.nm.replace(/^\d+ - /,''):c;
 
   // Color de cumplimiento
-  const pColor=totalPct>=100?'#6d28d9':totalPct>=avPct?'var(--gold)':'var(--bad)';
+  const pColor=cval(cls(totalPct,avPct));
   const markLeft=Math.min(avPct,99); // position del marcador avance
 
   // ── Tarjeta principal ──
@@ -1174,7 +1180,7 @@ function renderClienteDetail(gk,vk,c){
         const bm=m[b.k];
         const noMeta=bm.meta===0; // vendió pero sin meta → bono
         const p=bm.pct??0;
-        const bc=noMeta?'var(--muted)':p>=100?'#6d28d9':p>=avPct?'var(--gold)':'var(--bad)';
+        const bc=noMeta?'var(--muted)':cval(cls(p,avPct));
         const w=noMeta?100:Math.min(p,100);
         return `<div class="bmdc">
           <div class="bmdch">
@@ -1225,9 +1231,11 @@ function calcCrec(cs){
 
 function rankGrupo(gk){
   const gd=D[gk]; if(!gd)return'';
+  const av=calcAvanceMes();
+  const info=GINFO[gk]||{tipo:'AV'};
+  const avPct=info.tipo==='AV'?av.a.pct:av.p.pct;
   const vlist=Object.entries(gd.vs).map(([vk,vd])=>({
-    vk, m:vd.m, mo:mOk(vd.m), mc:mCon(vd.m), tp:totPct(vd.m),
-    crec:calcCrec(vd.cs)
+    vk, m:vd.m, mo:mOk(vd.m), mc:mCon(vd.m), tp:totPct(vd.m)
   }));
   vlist.sort((a,b)=>b.mo!==a.mo?b.mo-a.mo:b.tp-a.tp);
 
@@ -1235,13 +1243,10 @@ function rankGrupo(gk){
   const rows=vlist.map((v,i)=>{
     const isMe=me.rol==='Vend'&&me.u===v.vk;
     const bc=BR.map(b=>{
-      const p=v.m[b.k].pct; const c2=cls(p);
+      const p=v.m[b.k].pct; const c2=cls(p,avPct);
       return `<td><span class="pc ${c2}">${p===null?'N/A':p+'%'}</span></td>`;
     }).join('');
-    const tc=cls(v.tp);
-    const crecTxt=v.crec>0?`<span style="color:var(--ok)">+${v.crec}%</span>`
-                 :v.crec<0?`<span style="color:var(--bad)">${v.crec}%</span>`
-                 :`<span style="color:var(--muted)">0%</span>`;
+    const tc=cls(v.tp,avPct);
     return `<tr${isMe?' class="me"':''}>
       <td>${i<3?`<span class="rmed">${meds[i]}</span>`:`<span class="rnk">${i+1}</span>`}</td>
       <td><b style="font-size:11px">${gk}</b></td>
@@ -1251,7 +1256,6 @@ function rankGrupo(gk){
       </td>
       ${bc}
       <td><span class="pc ${tc}">${v.tp}%</span></td>
-      <td>${crecTxt}</td>
     </tr>`;
   }).join('');
 
@@ -1261,7 +1265,7 @@ function rankGrupo(gk){
       <thead><tr>
         <th>#</th><th>GRUPO</th><th>VENDEDOR</th>
         ${BR.map(b=>`<th>${b.s}</th>`).join('')}
-        <th>TOTAL</th><th>✓ CREC.</th>
+        <th>TOTAL</th>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table></div>

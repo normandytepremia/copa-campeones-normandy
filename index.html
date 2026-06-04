@@ -643,6 +643,12 @@ function totPct(m){
   BR.forEach(b=>{tm+=m[b.k].meta;tv+=m[b.k].venta;});
   return tm>0?Math.round((tv/tm)*100):0;
 }
+/* Promedio simple de los % por marca (igual peso a cada marca) — para nivel cliente */
+function brandAvgPct(m){
+  const con=BR.filter(b=>m[b.k].meta>0);
+  if(!con.length)return 0;
+  return Math.round(con.reduce((s,b)=>s+(m[b.k].pct??0),0)/con.length);
+}
 function mOk(m){return BR.filter(b=>m[b.k].pct!==null&&m[b.k].pct>=100).length;}
 function mCon(m){return BR.filter(b=>m[b.k].meta>0).length;}
 /* Semáforo: verde si ≥ avance, amarillo si ≥ avance-3, rojo si < avance-3 */
@@ -1020,7 +1026,7 @@ function renderVendedores(gk){
     const nc=Object.keys(vd.cs).length;
     // Clientes en meta: total unidades >= 100%
     const enMeta=Object.values(vd.cs).filter(cd=>{
-      const t=gTotals(cd); return t.meta>0&&t.pct>=100;
+      return gTotals(cd).meta>0&&brandAvgPct(cd.m)>=100;
     }).length;
     const vcl=cls(vt.pct,avPct);
     const dotCol=cval(vcl);
@@ -1111,7 +1117,7 @@ function renderClientes(gk,vk){
   // ── Tabla de clientes ordenada por % cumplimiento DESC ──
   const cs=Object.entries(vd.cs).map(([cod,cd])=>{
     const t=gTotals(cd);
-    return{cod,cd,meta:t.meta,venta:t.venta,pct:t.pct};
+    return{cod,cd,meta:t.meta,venta:t.venta,pct:brandAvgPct(cd.m)};
   });
   cs.sort((a,b)=>b.pct-a.pct);
 
@@ -1137,7 +1143,6 @@ function renderClientes(gk,vk){
 
   const nc=cs.length;
   const enMeta=cs.filter(c=>c.meta>0&&c.pct>=100).length;
-
   return `${kpis}${marcaSec}
     <div class="vsec" style="margin-top:4px">
       <span style="font-size:16px">👥</span>
@@ -1175,16 +1180,15 @@ function computeClientData(cData, sem){
   if(sem==='all'){
     let tm=0,tv=0;
     BR.forEach(b=>{if(cData.m[b.k].meta>0)tm+=cData.m[b.k].meta; tv+=cData.m[b.k].venta;});
-    return{m:cData.m,totalMeta:tm,totalVenta:tv,totalPct:tm>0?Math.round(tv/tm*100):0};
+    return{m:cData.m,totalMeta:tm,totalVenta:tv,totalPct:brandAvgPct(cData.m)};
   }
-  // Solo la semana seleccionada (sin acumulado)
   const sd=cData.sems[sem];
   const m=initM();
   if(sd) BR.forEach(b=>{m[b.k].meta=sd[b.k].meta||0; m[b.k].venta=sd[b.k].venta||0;});
   calcPct(m);
   let tm=0,tv=0;
   BR.forEach(b=>{if(m[b.k].meta>0)tm+=m[b.k].meta; tv+=m[b.k].venta;});
-  return{m,totalMeta:tm,totalVenta:tv,totalPct:tm>0?Math.round(tv/tm*100):0};
+  return{m,totalMeta:tm,totalVenta:tv,totalPct:brandAvgPct(m)};
 }
 
 /* Nivel 3: Detalle cliente */
